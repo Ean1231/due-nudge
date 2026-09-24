@@ -21,7 +21,11 @@ export async function sendViaGmail(input: {
   });
   const data = (await response.json()) as { id?: string; error?: { message?: string } };
   if (!response.ok || !data.id) {
-    throw new Error(data.error?.message || "Gmail rejected the reminder");
+    const message = data.error?.message || "Gmail rejected the reminder";
+    if (message.toLowerCase().includes("insufficient authentication scopes")) {
+      throw new Error("Gmail send permission is missing. Disconnect Gmail, then connect it again and approve email sending.");
+    }
+    throw new Error(message);
   }
   return data.id;
 }

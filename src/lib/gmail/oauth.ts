@@ -19,6 +19,7 @@ export function gmailConnectUrl(state: string) {
   url.searchParams.set("scope", GMAIL_SCOPE);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
+  url.searchParams.set("include_granted_scopes", "true");
   url.searchParams.set("state", state);
   return url.toString();
 }
@@ -62,11 +63,15 @@ export async function exchangeGmailCode(code: string) {
   const data = (await response.json()) as {
     access_token?: string;
     refresh_token?: string;
+    scope?: string;
     error?: string;
     error_description?: string;
   };
   if (!response.ok || !data.access_token || !data.refresh_token) {
     throw new Error(data.error_description || data.error || "Google did not return a refresh token");
+  }
+  if (!data.scope?.split(" ").includes("https://www.googleapis.com/auth/gmail.send")) {
+    throw new Error("Google did not grant permission to send email");
   }
   const email = await gmailAddress(data.access_token);
   return { refreshToken: data.refresh_token, email };
@@ -88,6 +93,14 @@ export async function gmailAccessToken(refreshToken: string) {
     throw new Error(data.error_description || data.error || "Could not refresh Gmail access");
   }
   return data.access_token;
+}
+
+export async function revokeGmailToken(refreshToken: string) {
+  await fetch("https://oauth2.googleapis.com/revoke", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: refreshToken }),
+  });
 }
 
 async function gmailAddress(accessToken: string) {

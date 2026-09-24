@@ -14,14 +14,23 @@ export function AppHeader({ label, gmailEmail }: { label: string; gmailEmail?: s
           <AppNav />
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[var(--muted)] sm:inline">{label}</span>
           {gmailEmail ? (
             <form action={disconnectGmail}>
-              <button className="btn btn-ghost" type="submit">
-                Disconnect {gmailEmail}
+              <button
+                className="btn btn-ghost px-3"
+                type="submit"
+                title={`Disconnect ${gmailEmail}. Reminders will stop sending until Gmail is connected again.`}
+                aria-label={`Disconnect Gmail account ${gmailEmail}`}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m9 15-2 2a4 4 0 0 1-6-6l3-3a4 4 0 0 1 5.6-.1" />
+                  <path d="m15 9 2-2a4 4 0 0 1 6 6l-3 3a4 4 0 0 1-5.6.1" />
+                  <path d="m8 2 1 3M2 8l3 1M16 22l-1-3M22 16l-3-1" />
+                </svg>
               </button>
             </form>
           ) : null}
+          <span className="hidden text-sm text-[var(--muted)] sm:inline">{label}</span>
           <form
             action={async () => {
               "use server";
