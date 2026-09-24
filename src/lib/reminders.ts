@@ -35,16 +35,20 @@ export async function processDueReminders(now = new Date()) {
       if ((await getSendAllowance(invoice.user)).blocked) break;
 
       try {
-        await sendInvoiceReminder({
-          to: invoice.client.email,
-          clientName: invoice.client.name,
-          businessName: invoice.user.businessName || invoice.user.name || "Your freelancers",
-          invoiceNumber: invoice.number,
-          amountCents: invoice.amountCents,
-          currency: invoice.currency,
-          dueDate: invoice.dueDate,
-          milestone,
-        });
+        const emailResult = await sendInvoiceReminder(
+          {
+            to: invoice.client.email,
+            clientName: invoice.client.name,
+            businessName: invoice.user.businessName || invoice.user.name || "Your freelancers",
+            invoiceNumber: invoice.number,
+            amountCents: invoice.amountCents,
+            currency: invoice.currency,
+            dueDate: invoice.dueDate,
+            milestone,
+          },
+          invoice.user,
+        );
+        if (emailResult && "needsGmail" in emailResult) break;
 
         await prisma.reminderLog.create({
           data: {

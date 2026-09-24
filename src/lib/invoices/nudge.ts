@@ -1,7 +1,7 @@
 import type { Client, Invoice, ReminderLog, User } from "@prisma/client";
 import { freeSendLimitMessage, getSendAllowance } from "@/lib/billing/allowance";
 import { prisma } from "@/lib/db";
-import { sendInvoiceReminder } from "@/lib/email";
+import { GMAIL_REQUIRED_MESSAGE, sendInvoiceReminder } from "@/lib/email";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -27,16 +27,22 @@ export async function sendManualReminder(
 
   const manualCount = reminders.filter((reminder) => reminder.milestone >= 100).length;
   const milestone = 100 + manualCount;
-  const emailResult = await sendInvoiceReminder({
-    to: client.email,
-    clientName: client.name,
-    businessName: user.businessName || user.name || "Your freelancers",
-    invoiceNumber: invoice.number,
-    amountCents: invoice.amountCents,
-    currency: invoice.currency,
-    dueDate: invoice.dueDate,
-    milestone,
-  });
+  const emailResult = await sendInvoiceReminder(
+    {
+      to: client.email,
+      clientName: client.name,
+      businessName: user.businessName || user.name || "Your freelancers",
+      invoiceNumber: invoice.number,
+      amountCents: invoice.amountCents,
+      currency: invoice.currency,
+      dueDate: invoice.dueDate,
+      milestone,
+    },
+    user,
+  );
+  if (emailResult && "needsGmail" in emailResult) {
+    return { ok: false as const, error: GMAIL_REQUIRED_MESSAGE, gmail: true as const };
+  }
 
   await prisma.reminderLog.create({
     data: { invoiceId: invoice.id, milestone },

@@ -65,6 +65,8 @@ export default function InvoicesPage() {
       setError(`Invoice saved, but the reminder email failed: ${data.reminderError || "unknown error"}`);
     } else if (data.reminderStatus === "limit") {
       setError(data.reminderError || "Subscribe to send more reminders.");
+    } else if (data.reminderStatus === "gmail") {
+      setError(data.reminderError || "Connect Gmail so reminders come from your address.");
     } else {
       setNotice("Invoice saved.");
     }
