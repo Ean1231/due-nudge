@@ -45,14 +45,14 @@ export default function RegisterPage() {
       setError("Account created, but login failed. Try logging in.");
       return;
     }
-    router.push("/dashboard");
+    router.push("/api/gmail/connect");
     router.refresh();
   }
 
   return (
     <AuthShell
       title="Create your account"
-      subtitle="3 reminder emails free. Then $12/mo."
+      subtitle="Create your account, then connect Gmail to send 3 reminders free."
       footer={
         <>
           Already registered? <Link href="/login">Log in</Link>
@@ -78,8 +78,11 @@ export default function RegisterPage() {
         </div>
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
         <button className="btn btn-primary w-full" type="submit" disabled={pending}>
-          {pending ? "Creating…" : "Create account"}
+          {pending ? "Creating…" : "Create account & connect Gmail"}
         </button>
+        <p className="text-center text-xs text-[var(--muted)]">
+          Google will ask permission to send invoice reminders from your Gmail address.
+        </p>
       </form>
     </AuthShell>
   );
