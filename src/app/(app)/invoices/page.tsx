@@ -6,6 +6,10 @@ import { InvoiceRow, InvoiceTable } from "@/components/invoices/invoice-table";
 
 type ClientOption = { id: string; name: string };
 
+function showConnectGmailPopup() {
+  window.alert("Connect Gmail first. Click the chain icon in the top-right corner, then approve email sending.");
+}
+
 export default function InvoicesPage() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
@@ -66,7 +70,7 @@ export default function InvoicesPage() {
     } else if (data.reminderStatus === "limit") {
       setError(data.reminderError || "Subscribe to send more reminders.");
     } else if (data.reminderStatus === "gmail") {
-      setError(data.reminderError || "Connect Gmail so reminders come from your address.");
+      showConnectGmailPopup();
     } else {
       setNotice("Invoice saved.");
     }
@@ -103,6 +107,10 @@ export default function InvoicesPage() {
     const data = await res.json().catch(() => ({}));
     setNudgingId(null);
     if (!res.ok) {
+      if (data.gmail) {
+        showConnectGmailPopup();
+        return;
+      }
       setError(data.error || "Could not send reminder");
       return;
     }

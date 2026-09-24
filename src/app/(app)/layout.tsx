@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app/app-header";
-import { GMAIL_REQUIRED_MESSAGE } from "@/lib/email";
 import { getSendAllowance } from "@/lib/billing/allowance";
 import { getAppUser } from "@/lib/session";
 import { isBillingRequired, needsPaymentUpdate } from "@/lib/billing/status";
@@ -17,14 +16,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <AppHeader label={user.businessName || user.email} gmailEmail={user.gmailEmail} />
-      {!user.gmailEmail ? (
-        <div className="border-b border-[var(--line)] bg-[#fff7df] px-6 py-3 text-center text-sm">
-          {GMAIL_REQUIRED_MESSAGE}{" "}
-          <a href="/api/gmail/connect" className="font-semibold underline">
-            Connect Gmail
-          </a>
-        </div>
-      ) : null}
       {paymentFailed ? (
         <div className="border-b border-[var(--line)] bg-[#fff7df] px-6 py-3 text-center text-sm">
           Your last payment did not go through.{" "}

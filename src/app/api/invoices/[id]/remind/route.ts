@@ -22,8 +22,9 @@ export async function POST(_request: Request, { params }: Params) {
   try {
     const result = await sendManualReminder(user, invoice.client, invoice, invoice.reminders);
     if (!result.ok) {
-      const status = "gmail" in result && result.gmail ? 409 : "limit" in result && result.limit ? 402 : 429;
-      return NextResponse.json({ error: result.error }, { status });
+      const gmail = "gmail" in result && result.gmail === true;
+      const status = gmail ? 409 : "limit" in result && result.limit ? 402 : 429;
+      return NextResponse.json({ error: result.error, gmail }, { status });
     }
     return NextResponse.json(result);
   } catch (err) {
