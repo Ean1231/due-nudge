@@ -18,12 +18,12 @@ export default async function DashboardPage({
   const [unpaid, clientCount, recentReminders] = await Promise.all([
     prisma.invoice.findMany({
       where: { userId: user.id, status: "unpaid" },
-      include: { client: true, reminders: true },
+      include: { client: true, reminders: { where: { status: "sent" } } },
       orderBy: { dueDate: "asc" },
     }),
     prisma.client.count({ where: { userId: user.id } }),
     prisma.reminderLog.findMany({
-      where: { invoice: { userId: user.id } },
+      where: { invoice: { userId: user.id }, status: "sent", sentAt: { not: null } },
       include: { invoice: { include: { client: true } } },
       orderBy: { sentAt: "desc" },
       take: 5,

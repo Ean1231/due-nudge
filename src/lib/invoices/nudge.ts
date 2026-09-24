@@ -1,7 +1,5 @@
 import type { Client, Invoice, ReminderLog, User } from "@prisma/client";
-import { freeSendLimitMessage, getSendAllowance } from "@/lib/billing/allowance";
-import { prisma } from "@/lib/db";
-import { GMAIL_REQUIRED_MESSAGE, sendInvoiceReminder } from "@/lib/email";
+import { deliverReminder } from "@/lib/reminders/delivery";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -10,8 +8,10 @@ export async function sendManualReminder(
   client: Client,
   invoice: Invoice,
   reminders: ReminderLog[],
+  retryUnknown = false,
 ) {
   const latest = reminders.reduce<Date | null>((newest, reminder) => {
+    if (reminder.status !== "sent" || !reminder.sentAt) return newest;
     if (!newest || reminder.sentAt > newest) return reminder.sentAt;
     return newest;
   }, null);
@@ -20,34 +20,13 @@ export async function sendManualReminder(
     return { ok: false as const, error: "This client was already emailed about this invoice in the last 24 hours." };
   }
 
-  const allowance = await getSendAllowance(user);
-  if (allowance.blocked) {
-    return { ok: false as const, error: freeSendLimitMessage(), limit: true as const };
-  }
-
-  const manualCount = reminders.filter((reminder) => reminder.milestone >= 100).length;
+  const manualCount = reminders.filter((reminder) => reminder.milestone >= 100 && reminder.status === "sent").length;
   const milestone = 100 + manualCount;
-  const emailResult = await sendInvoiceReminder(
-    {
-      to: client.email,
-      clientName: client.name,
-      businessName: user.businessName || user.name || "Your freelancers",
-      invoiceNumber: invoice.number,
-      amountCents: invoice.amountCents,
-      currency: invoice.currency,
-      dueDate: invoice.dueDate,
-      milestone,
-    },
-    user,
-  );
-  if (emailResult && "needsGmail" in emailResult) {
-    return { ok: false as const, error: GMAIL_REQUIRED_MESSAGE, gmail: true as const };
-  }
-
-  await prisma.reminderLog.create({
-    data: { invoiceId: invoice.id, milestone },
-  });
-
-  const demo = Boolean(emailResult && "id" in emailResult && String(emailResult.id).startsWith("demo-"));
-  return { ok: true as const, demo, to: client.email };
+  const result = await deliverReminder(user, client, invoice, milestone, { retryUnknown });
+  if (result.ok) return result;
+  return {
+    ok: false as const,
+    code: result.code,
+    error: result.error,
+  };
 }

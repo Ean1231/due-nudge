@@ -1,7 +1,11 @@
 import { formatMoney } from "@/lib/money";
 import type { ReminderEmailContent, ReminderEmailPayload } from "@/lib/email/types";
+import { interpolateTemplate } from "@/lib/email/custom-template";
 
-export function buildReminderEmail(payload: ReminderEmailPayload): ReminderEmailContent {
+export function buildReminderEmail(
+  payload: ReminderEmailPayload,
+  template?: { subject: string; body: string } | null,
+): ReminderEmailContent {
   const amount = formatMoney(payload.amountCents, payload.currency);
   const due = payload.dueDate.toLocaleDateString("en-US", {
     year: "numeric",
@@ -9,16 +13,30 @@ export function buildReminderEmail(payload: ReminderEmailPayload): ReminderEmail
     day: "numeric",
   });
 
+  if (template) {
+    const values = {
+      clientName: payload.clientName,
+      businessName: payload.businessName,
+      invoiceNumber: payload.invoiceNumber,
+      amount,
+      dueDate: due,
+    };
+    const subject = interpolateTemplate(template.subject, values);
+    const text = interpolateTemplate(template.body, values);
+    const html = `<div style="font-family:Georgia,serif;color:#0f1f1c;line-height:1.6;max-width:560px">${escapeHtml(text).replaceAll("\n", "<br/>")}</div>`;
+    return { subject, text, html };
+  }
+
   const text = [
-    `Hi ${payload.clientName},`,
-    "",
-    `This is a reminder from ${payload.businessName} that invoice ${payload.invoiceNumber} for ${amount} (due ${due}) is still unpaid.`,
-    "",
-    "Please arrange payment at your earliest convenience. If you've already paid, you can ignore this message.",
-    "",
-    "Thanks,",
-    payload.businessName,
-  ].join("\n");
+      `Hi ${payload.clientName},`,
+      "",
+      `This is a reminder from ${payload.businessName} that invoice ${payload.invoiceNumber} for ${amount} (due ${due}) is still unpaid.`,
+      "",
+      "Please arrange payment at your earliest convenience. If you've already paid, you can ignore this message.",
+      "",
+      "Thanks,",
+      payload.businessName,
+    ].join("\n");
 
   const html = `
     <div style="font-family:Georgia,serif;color:#0f1f1c;line-height:1.6;max-width:560px">

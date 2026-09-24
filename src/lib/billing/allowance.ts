@@ -8,7 +8,10 @@ export async function getSendAllowance(user: { id: string; subscriptionStatus: s
   }
 
   const used = await prisma.reminderLog.count({
-    where: { invoice: { userId: user.id } },
+    where: {
+      invoice: { userId: user.id },
+      status: { in: ["sending", "sent"] },
+    },
   });
   const remaining = Math.max(0, FREE_SENDS - used);
   return { limited: true as const, used, remaining, blocked: remaining <= 0 };

@@ -1,0 +1,21 @@
+ALTER TABLE "User"
+ADD COLUMN "reminderSubject" TEXT,
+ADD COLUMN "reminderBody" TEXT;
+
+ALTER TABLE "Invoice"
+ADD COLUMN "attachmentPath" TEXT,
+ADD COLUMN "attachmentName" TEXT,
+ADD COLUMN "attachmentSize" INTEGER,
+ADD COLUMN "attachmentContentType" TEXT;
+
+ALTER TABLE "ReminderLog"
+ADD COLUMN "status" TEXT NOT NULL DEFAULT 'sent',
+ADD COLUMN "providerMessageId" TEXT,
+ADD COLUMN "error" TEXT,
+ADD COLUMN "attemptCount" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN "claimedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ALTER COLUMN "sentAt" DROP NOT NULL,
+ALTER COLUMN "sentAt" SET DEFAULT CURRENT_TIMESTAMP;
+
+CREATE INDEX "ReminderLog_status_claimedAt_idx" ON "ReminderLog"("status", "claimedAt");

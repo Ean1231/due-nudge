@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api/require-user";
 import { updateInvoiceSchema } from "@/lib/invoices/schema";
+import { deleteInvoicePdf } from "@/lib/invoices/attachment";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -44,5 +45,10 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   await prisma.invoice.delete({ where: { id } });
+  if (existing.attachmentPath) {
+    await deleteInvoicePdf(existing.attachmentPath).catch((cleanupError) => {
+      console.error("[DueNudge] Could not delete invoice PDF:", cleanupError);
+    });
+  }
   return NextResponse.json({ ok: true });
 }

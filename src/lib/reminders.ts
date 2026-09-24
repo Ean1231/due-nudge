@@ -1,7 +1,6 @@
 import { addDays, startOfDay } from "date-fns";
-import { getSendAllowance } from "@/lib/billing/allowance";
 import { prisma } from "@/lib/db";
-import { sendInvoiceReminder } from "@/lib/email";
+import { deliverReminder } from "@/lib/reminders/delivery";
 
 export const REMINDER_MILESTONES = [3, 7, 14] as const;
 
@@ -21,10 +20,9 @@ export async function processDueReminders(now = new Date()) {
 
   for (const invoice of unpaid) {
     const due = startOfDay(invoice.dueDate);
-    const sentMilestones = new Set(invoice.reminders.map((r) => r.milestone));
-
-    const allowance = await getSendAllowance(invoice.user);
-    if (allowance.blocked) continue;
+    const sentMilestones = new Set(
+      invoice.reminders.filter((reminder) => reminder.status === "sent").map((reminder) => reminder.milestone),
+    );
 
     for (const milestone of REMINDER_MILESTONES) {
       if (sentMilestones.has(milestone)) continue;
@@ -32,31 +30,16 @@ export async function processDueReminders(now = new Date()) {
       const sendOn = addDays(due, milestone);
       if (today < sendOn) continue;
 
-      if ((await getSendAllowance(invoice.user)).blocked) break;
-
       try {
-        const emailResult = await sendInvoiceReminder(
-          {
-            to: invoice.client.email,
-            clientName: invoice.client.name,
-            businessName: invoice.user.businessName || invoice.user.name || "Your freelancers",
-            invoiceNumber: invoice.number,
-            amountCents: invoice.amountCents,
-            currency: invoice.currency,
-            dueDate: invoice.dueDate,
-            milestone,
-          },
-          invoice.user,
-        );
-        if (emailResult && "needsGmail" in emailResult) break;
-
-        await prisma.reminderLog.create({
-          data: {
-            invoiceId: invoice.id,
-            milestone,
-          },
-        });
-        sent += 1;
+        const result = await deliverReminder(invoice.user, invoice.client, invoice, milestone);
+        if (result.ok) {
+          sent += 1;
+          continue;
+        }
+        if (result.code === "limit" || result.code === "gmail") break;
+        if (result.code !== "duplicate") {
+          errors.push(`Invoice ${invoice.id} milestone +${milestone}: ${result.error}`);
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         errors.push(`Invoice ${invoice.id} milestone +${milestone}: ${message}`);

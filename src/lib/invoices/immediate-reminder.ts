@@ -1,7 +1,5 @@
 import type { Client, Invoice, User } from "@prisma/client";
-import { freeSendLimitMessage, getSendAllowance } from "@/lib/billing/allowance";
-import { prisma } from "@/lib/db";
-import { GMAIL_REQUIRED_MESSAGE, sendInvoiceReminder } from "@/lib/email";
+import { deliverReminder } from "@/lib/reminders/delivery";
 
 export type ReminderStatus = "sent" | "demo" | "failed" | "limit" | "gmail";
 
@@ -10,45 +8,14 @@ export async function sendImmediateReminder(
   client: Client,
   invoice: Invoice,
 ) {
-  let reminderStatus: ReminderStatus = "failed";
-  let reminderError: string | null = null;
-
-  const allowance = await getSendAllowance(user);
-  if (allowance.blocked) {
-    return { reminderStatus: "limit" as const, reminderError: freeSendLimitMessage() };
+  const result = await deliverReminder(user, client, invoice, 0);
+  if (result.ok) {
+    return {
+      reminderStatus: result.demo ? ("demo" as const) : ("sent" as const),
+      reminderError: null,
+    };
   }
-
-  try {
-    const emailResult = await sendInvoiceReminder(
-      {
-        to: client.email,
-        clientName: client.name,
-        businessName: user.businessName || user.name || "Your freelancers",
-        invoiceNumber: invoice.number,
-        amountCents: invoice.amountCents,
-        currency: invoice.currency,
-        dueDate: invoice.dueDate,
-        milestone: 0,
-      },
-      user,
-    );
-    if (emailResult && "needsGmail" in emailResult) {
-      return { reminderStatus: "gmail" as const, reminderError: GMAIL_REQUIRED_MESSAGE };
-    }
-
-    reminderStatus = isDemoSend(emailResult) ? "demo" : "sent";
-    await prisma.reminderLog.create({
-      data: { invoiceId: invoice.id, milestone: 0 },
-    });
-  } catch (err) {
-    reminderStatus = "failed";
-    reminderError = err instanceof Error ? err.message : "Unknown email error";
-    console.error("[DueNudge] Immediate reminder failed:", err);
-  }
-
-  return { reminderStatus, reminderError };
-}
-
-function isDemoSend(result: { id?: string } | null | undefined) {
-  return Boolean(result?.id?.startsWith("demo-"));
+  const status: ReminderStatus =
+    result.code === "limit" ? "limit" : result.code === "gmail" ? "gmail" : "failed";
+  return { reminderStatus: status, reminderError: result.error };
 }

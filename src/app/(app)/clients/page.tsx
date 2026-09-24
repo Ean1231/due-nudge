@@ -21,6 +21,8 @@ export default function ClientsPage() {
   }
 
   useEffect(() => {
+    // Initial client-side load.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 

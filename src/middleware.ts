@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const protectedPaths = ["/dashboard", "/clients", "/invoices", "/billing"];
+const protectedPaths = ["/dashboard", "/clients", "/invoices", "/billing", "/settings"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -39,5 +39,7 @@ export const config = {
     "/invoices/:path*",
     "/billing",
     "/billing/:path*",
+    "/settings",
+    "/settings/:path*",
   ],
 };

@@ -1,7 +1,7 @@
 type ReminderLog = {
   id: string;
   milestone: number;
-  sentAt: Date;
+  sentAt: Date | null;
   invoice: { number: string; client: { email: string } };
 };
 
@@ -23,7 +23,7 @@ export function RecentReminders({ logs }: { logs: ReminderLog[] }) {
               <span>
                 <strong>{log.invoice.number}</strong> → {log.invoice.client.email} (+{log.milestone})
               </span>
-              <span className="text-sm text-[var(--muted)]">{log.sentAt.toLocaleString()}</span>
+              <span className="text-sm text-[var(--muted)]">{log.sentAt?.toLocaleString() || "Sending"}</span>
             </li>
           ))}
         </ul>

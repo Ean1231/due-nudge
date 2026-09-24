@@ -5,7 +5,7 @@ import { sendManualReminder } from "@/lib/invoices/nudge";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function POST(_request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: Params) {
   const { user, error } = await requireApiUser();
   if (error) return error;
 
@@ -20,11 +20,20 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   try {
-    const result = await sendManualReminder(user, invoice.client, invoice, invoice.reminders);
+    const body = await request.json().catch(() => ({}));
+    const retryUnknown = body && typeof body === "object" && body.retryUnknown === true;
+    const result = await sendManualReminder(user, invoice.client, invoice, invoice.reminders, retryUnknown);
     if (!result.ok) {
-      const gmail = "gmail" in result && result.gmail === true;
-      const status = gmail ? 409 : "limit" in result && result.limit ? 402 : 429;
-      return NextResponse.json({ error: result.error, gmail }, { status });
+      const code = "code" in result ? result.code : "rate_limit";
+      const status =
+        code === "gmail" || code === "unknown"
+          ? 409
+          : code === "limit"
+            ? 402
+            : code === "failed"
+              ? 502
+              : 429;
+      return NextResponse.json({ error: result.error, code }, { status });
     }
     return NextResponse.json(result);
   } catch (err) {

@@ -8,6 +8,7 @@ const links = [
   { href: "/clients", label: "Clients" },
   { href: "/invoices", label: "Invoices" },
   { href: "/billing", label: "Billing" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function AppNav({ mobile = false }: { mobile?: boolean }) {

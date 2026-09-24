@@ -11,6 +11,7 @@ export type InvoiceRow = {
   currency: string;
   dueDate: string;
   status: string;
+  attachmentName: string | null;
   client: { name: string; email: string };
   reminders: { milestone: number }[];
 };
@@ -49,7 +50,17 @@ export function InvoiceTable({ invoices, nudgingId, onStatusChange, onNudge }: P
         <tbody>
           {invoices.map((invoice) => (
             <tr key={invoice.id} className="border-t border-[var(--line)]">
-              <td className="py-3 font-semibold">{invoice.number}</td>
+              <td className="py-3 font-semibold">
+                <span>{invoice.number}</span>
+                {invoice.attachmentName ? (
+                  <a
+                    className="mt-1 block text-xs font-normal text-[var(--brand)] underline"
+                    href={`/api/invoices/${invoice.id}/attachment`}
+                  >
+                    Download PDF
+                  </a>
+                ) : null}
+              </td>
               <td className="py-3">{invoice.client.name}</td>
               <td className="py-3">{formatMoney(invoice.amountCents, invoice.currency)}</td>
               <td className="py-3">{formatDate(invoice.dueDate)}</td>

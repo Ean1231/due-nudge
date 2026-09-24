@@ -19,6 +19,8 @@ model User {
   subscriptionStatus   String    @default("none")
   gmailEmail           String?
   gmailRefreshToken    String?
+  reminderSubject      String?
+  reminderBody         String?
   clients              Client[]
   invoices             Invoice[]
   createdAt            DateTime  @default(now())
@@ -52,6 +54,10 @@ model Invoice {
   dueDate     DateTime
   status      String        @default("unpaid")
   paidAt      DateTime?
+  attachmentPath        String?
+  attachmentName        String?
+  attachmentSize        Int?
+  attachmentContentType String?
   reminders   ReminderLog[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -62,11 +68,18 @@ model Invoice {
 }
 
 model ReminderLog {
-  id        String   @id @default(cuid())
-  invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  milestone Int
-  sentAt    DateTime @default(now())
+  id                String    @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  milestone         Int
+  status            String    @default("sent")
+  providerMessageId String?
+  error             String?
+  attemptCount      Int       @default(1)
+  claimedAt         DateTime  @default(now())
+  sentAt            DateTime? @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([invoiceId, milestone])
+  @@index([status, claimedAt])
 }

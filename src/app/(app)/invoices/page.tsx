@@ -32,6 +32,8 @@ export default function InvoicesPage() {
   }
 
   useEffect(() => {
+    // Initial client-side load.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 
@@ -42,17 +44,10 @@ export default function InvoicesPage() {
     setNotice(null);
     const form = event.currentTarget;
     const formData = new FormData(form);
+    formData.set("currency", "usd");
     const res = await fetch("/api/invoices", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId: formData.get("clientId"),
-        number: formData.get("number"),
-        amount: formData.get("amount"),
-        dueDate: formData.get("dueDate"),
-        description: formData.get("description") || null,
-        currency: "usd",
-      }),
+      body: formData,
     });
     const data = await res.json().catch(() => ({}));
     setPending(false);
@@ -99,16 +94,27 @@ export default function InvoicesPage() {
     await load();
   }
 
-  async function nudge(id: string) {
+  async function nudge(id: string, retryUnknown = false) {
     setError(null);
     setNotice(null);
     setNudgingId(id);
-    const res = await fetch(`/api/invoices/${id}/remind`, { method: "POST" });
+    const res = await fetch(`/api/invoices/${id}/remind`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ retryUnknown }),
+    });
     const data = await res.json().catch(() => ({}));
     setNudgingId(null);
     if (!res.ok) {
-      if (data.gmail) {
+      if (data.code === "gmail") {
         showConnectGmailPopup();
+        return;
+      }
+      if (data.code === "unknown") {
+        const retry = window.confirm(
+          `${data.error}\n\nOnly retry after confirming the message is not in Gmail Sent Mail.`,
+        );
+        if (retry) await nudge(id, true);
         return;
       }
       setError(data.error || "Could not send reminder");

@@ -43,6 +43,10 @@ export function InvoiceForm({ clients, error, pending, onSubmit }: Props) {
         <label htmlFor="description">Description (optional)</label>
         <input id="description" name="description" placeholder="Website redesign — March" />
       </div>
+      <div className="field md:col-span-2">
+        <label htmlFor="attachment">Invoice PDF (optional, maximum 3 MB)</label>
+        <input id="attachment" name="attachment" type="file" accept="application/pdf,.pdf" />
+      </div>
       <div className="md:col-span-2">
         {error ? <p className="mb-3 text-sm text-[var(--danger)]">{error}</p> : null}
         <button className="btn btn-primary" type="submit" disabled={pending || clients.length === 0}>
