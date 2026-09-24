@@ -7,7 +7,7 @@ import type { InvoiceBuilderInput } from "@/lib/invoice-builder/schema";
 import { INVOICE_TEMPLATES } from "@/lib/invoice-builder/templates";
 
 type LineItem = { id: string; description: string; quantity: string; unitPrice: string };
-const STEPS = ["Business", "Client", "Invoice", "Items", "Finish"];
+const STEPS = ["Business", "Client", "Invoice", "Items", "Review"];
 
 export function InvoiceBuilderForm({
   templateId,
@@ -29,7 +29,9 @@ export function InvoiceBuilderForm({
   const [step, setStep] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ id: string; number: string; reminder: string } | null>(null);
+  const [success, setSuccess] = useState<{ id: string; number: string; email: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sentNotice, setSentNotice] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const template = INVOICE_TEMPLATES.find((item) => item.id === templateId)!;
 
@@ -85,11 +87,7 @@ export function InvoiceBuilderForm({
     const upload = new FormData();
     upload.set("payload", JSON.stringify(payload));
     const logo = form.get("logo");
-    const sourceDocument = form.get("sourceDocument");
     if (logo instanceof File && logo.size > 0) upload.set("logo", logo);
-    if (sourceDocument instanceof File && sourceDocument.size > 0) {
-      upload.set("sourceDocument", sourceDocument);
-    }
 
     const response = await fetch("/api/invoice-builder", {
       method: "POST",
@@ -102,18 +100,34 @@ export function InvoiceBuilderForm({
       return;
     }
 
-    if (data.reminderStatus === "gmail") {
-      window.alert("Invoice created. Connect Gmail using the chain icon to send its reminder.");
+    setSentNotice(null);
+    setSuccess({
+      id: data.invoice.id,
+      number: data.invoice.number,
+      email: data.invoice.client.email,
+    });
+  }
+
+  async function sendReminder() {
+    if (!success) return;
+    setSending(true);
+    setError(null);
+    const response = await fetch(`/api/invoices/${success.id}/remind`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const data = await response.json().catch(() => ({}));
+    setSending(false);
+    if (!response.ok) {
+      if (data.code === "gmail") {
+        window.alert("Connect Gmail first. Click the chain icon in the top-right corner, then send this reminder.");
+        return;
+      }
+      setError(data.error || "Could not send the reminder.");
+      return;
     }
-    const reminder =
-      data.reminderStatus === "sent"
-        ? `The first reminder was sent to ${data.invoice.client.email}.`
-        : data.reminderStatus === "limit"
-          ? "The invoice was created, but your free reminder allowance is finished."
-          : data.reminderStatus === "failed"
-            ? `The invoice was created, but sending failed: ${data.reminderError}`
-            : "The invoice and PDF were created.";
-    setSuccess({ id: data.invoice.id, number: data.invoice.number, reminder });
+    setSentNotice(`Reminder sent to ${data.to}. The PDF is attached.`);
   }
 
   function goNext() {
@@ -134,11 +148,18 @@ export function InvoiceBuilderForm({
       <section className="panel mx-auto max-w-2xl space-y-5 text-center">
         <p className="text-sm font-semibold text-[var(--ok)]">Invoice created</p>
         <h2 className="display text-3xl">{success.number} is ready</h2>
-        <p className="text-[var(--muted)]">{success.reminder}</p>
+        <p className="text-[var(--muted)]">
+          Download the PDF and check it. Nothing has been emailed yet. When it looks right, send it to {success.email}.
+        </p>
+        {sentNotice ? <p className="text-sm text-[var(--ok)]">{sentNotice}</p> : null}
+        {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
         <div className="flex flex-wrap justify-center gap-3">
-          <a className="btn btn-primary" href={`/api/invoices/${success.id}/attachment`}>
+          <a className="btn btn-ghost" href={`/api/invoices/${success.id}/attachment`}>
             Download PDF
           </a>
+          <button className="btn btn-primary" type="button" disabled={sending || Boolean(sentNotice)} onClick={() => void sendReminder()}>
+            {sending ? "Sending…" : sentNotice ? "Reminder sent" : "Send reminder"}
+          </button>
           <Link className="btn btn-ghost" href="/invoices">
             View invoices
           </Link>
@@ -287,18 +308,9 @@ export function InvoiceBuilderForm({
             placeholder="J. Smith"
             required
           />
-          <div className="field">
-            <label htmlFor="sourceDocument">Original invoice (optional PDF, DOC, or DOCX; maximum 3 MB)</label>
-            <input
-              id="sourceDocument"
-              name="sourceDocument"
-              type="file"
-              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            />
-            <span className="text-xs text-[var(--muted)]">
-              Stored as-is and included with reminder emails alongside the generated PDF.
-            </span>
-          </div>
+          <p className="text-sm text-[var(--muted)] md:col-span-2">
+            This creates the invoice and PDF only. You can download it and send the reminder on the next screen.
+          </p>
         </FormSection>
       </div>
 
@@ -318,7 +330,7 @@ export function InvoiceBuilderForm({
           </button>
         ) : (
           <button className="btn btn-primary" type="submit" disabled={pending}>
-            {pending ? "Generating invoice…" : "Generate PDF invoice"}
+            {pending ? "Creating invoice…" : "Create invoice"}
           </button>
         )}
       </div>

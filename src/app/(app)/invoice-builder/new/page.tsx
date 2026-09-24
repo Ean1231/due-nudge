@@ -23,7 +23,7 @@ export default async function NewGeneratedInvoicePage({
         <p className="text-sm font-semibold text-[var(--brand)]">Invoice builder</p>
         <h1 className="display mt-2 text-4xl font-semibold">Enter invoice details</h1>
         <p className="mt-2 text-[var(--muted)]">
-          The finished PDF is stored privately and attached to every reminder for this invoice.
+          Nothing is emailed until you choose Send reminder on the last screen.
         </p>
       </div>
       <InvoiceBuilderForm

@@ -8,8 +8,7 @@ export default function InvoiceBuilderTemplatesPage() {
         <p className="text-sm font-semibold text-[var(--brand)]">Invoice builder</p>
         <h1 className="display mt-2 text-4xl font-semibold">Choose an invoice design</h1>
         <p className="mt-2 max-w-2xl text-[var(--muted)]">
-          Enter the details once. DueNudge generates a private PDF, stores it with the invoice,
-          and attaches it to every reminder.
+          Fill in the invoice, download the PDF, then send it when you are ready. Later reminders use the same PDF.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

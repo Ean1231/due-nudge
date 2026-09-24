@@ -5,12 +5,7 @@ import { requireApiUser } from "@/lib/api/require-user";
 import { invoiceBuilderSchema, invoiceTotals } from "@/lib/invoice-builder/schema";
 import { generateInvoicePdf } from "@/lib/invoice-builder/pdf";
 import { readInvoiceLogo } from "@/lib/invoice-builder/assets";
-import {
-  deleteInvoicePdf,
-  storeGeneratedInvoicePdf,
-  storeSourceDocument,
-} from "@/lib/invoices/attachment";
-import { sendImmediateReminder } from "@/lib/invoices/immediate-reminder";
+import { deleteInvoicePdf, storeGeneratedInvoicePdf } from "@/lib/invoices/attachment";
 
 export const runtime = "nodejs";
 
@@ -42,7 +37,6 @@ export async function POST(request: Request) {
   }
 
   let attachmentPath: string | null = null;
-  let sourceDocumentPath: string | null = null;
   let invoiceCreated = false;
   try {
     const logoFile = form.get("logo");
@@ -54,12 +48,6 @@ export async function POST(request: Request) {
       pdf,
     );
     attachmentPath = attachment.path;
-    const sourceFile = form.get("sourceDocument");
-    const sourceDocument =
-      sourceFile instanceof File && sourceFile.size > 0
-        ? await storeSourceDocument(user.id, sourceFile)
-        : null;
-    sourceDocumentPath = sourceDocument?.path || null;
 
     const result = await prisma.$transaction(async (tx) => {
       const normalizedEmail = data.clientEmail.toLowerCase();
@@ -102,21 +90,12 @@ export async function POST(request: Request) {
           attachmentName: attachment.name,
           attachmentSize: attachment.size,
           attachmentContentType: attachment.contentType,
-          sourceDocumentPath: sourceDocument?.path,
-          sourceDocumentName: sourceDocument?.name,
-          sourceDocumentSize: sourceDocument?.size,
-          sourceDocumentContentType: sourceDocument?.contentType,
         },
       });
       return { client, invoice };
     });
     invoiceCreated = true;
 
-    const reminder = await sendImmediateReminder(
-      { ...user, businessName: data.businessName },
-      result.client,
-      result.invoice,
-    );
     return NextResponse.json(
       {
         invoice: {
@@ -124,7 +103,6 @@ export async function POST(request: Request) {
           client: result.client,
           reminders: [],
         },
-        ...reminder,
       },
       { status: 201 },
     );
@@ -132,11 +110,6 @@ export async function POST(request: Request) {
     if (attachmentPath && !invoiceCreated) {
       await deleteInvoicePdf(attachmentPath).catch((cleanupError) => {
         console.error("[DueNudge] Could not clean up generated invoice PDF:", cleanupError);
-      });
-    }
-    if (sourceDocumentPath && !invoiceCreated) {
-      await deleteInvoicePdf(sourceDocumentPath).catch((cleanupError) => {
-        console.error("[DueNudge] Could not clean up original invoice file:", cleanupError);
       });
     }
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
