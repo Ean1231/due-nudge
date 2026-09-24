@@ -29,7 +29,19 @@ export function AppHeader({ label, gmailEmail }: { label: string; gmailEmail?: s
                 </svg>
               </button>
             </form>
-          ) : null}
+          ) : (
+            <a
+              href="/api/gmail/connect"
+              className="btn btn-ghost px-3"
+              title="Connect Gmail so invoice reminders can be sent from your address."
+              aria-label="Connect Gmail"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1" />
+                <path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1" />
+              </svg>
+            </a>
+          )}
           <span className="hidden text-sm text-[var(--muted)] sm:inline">{label}</span>
           <form
             action={async () => {
