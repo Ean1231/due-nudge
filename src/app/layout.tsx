@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Source_Serif_4({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
 
-const body = Manrope({
+const body = Source_Sans_3({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -18,7 +18,7 @@ const body = Manrope({
 export const metadata: Metadata = {
   title: "DueNudge — unpaid invoice follow-ups",
   description:
-    "Add clients and invoices, then DueNudge emails polite reminders at 3, 7, and 14 days past due.",
+    "Add a client and an invoice. DueNudge emails them now, then again 3, 7, and 14 days after the due date.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

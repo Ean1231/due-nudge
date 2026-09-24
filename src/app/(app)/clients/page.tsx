@@ -1,17 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-
-type Client = {
-  id: string;
-  name: string;
-  email: string;
-  company: string | null;
-};
+import { ClientForm } from "@/components/clients/client-form";
+import { ClientList, ClientRow } from "@/components/clients/client-list";
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function load() {
@@ -32,6 +28,7 @@ export default function ClientsPage() {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNotice(null);
     const form = event.currentTarget;
     const formData = new FormData(form);
     const res = await fetch("/api/clients", {
@@ -50,7 +47,21 @@ export default function ClientsPage() {
       return;
     }
     form.reset();
+    setNotice("Client saved. Next, add an invoice for them.");
     await load();
+  }
+
+  async function saveClient(client: ClientRow) {
+    const res = await fetch(`/api/clients/${client.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(client),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return data.error || "Could not update client";
+    setNotice("Client updated. Future reminders use this email.");
+    await load();
+    return null;
   }
 
   return (
@@ -58,50 +69,12 @@ export default function ClientsPage() {
       <div>
         <h1 className="display text-4xl font-semibold">Clients</h1>
         <p className="mt-2 text-[var(--muted)]">
-          Who you invoice — reminders go to their email.
+          Reminders go to the email you save here. Edit it if you typed it wrong.
         </p>
       </div>
-
-      <form onSubmit={onSubmit} className="panel grid gap-4 md:grid-cols-3">
-        <div className="field">
-          <label htmlFor="name">Name</label>
-          <input id="name" name="name" required />
-        </div>
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" required />
-        </div>
-        <div className="field">
-          <label htmlFor="company">Company (optional)</label>
-          <input id="company" name="company" />
-        </div>
-        <div className="md:col-span-3">
-          {error ? <p className="mb-3 text-sm text-[var(--danger)]">{error}</p> : null}
-          <button className="btn btn-primary" type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Add client"}
-          </button>
-        </div>
-      </form>
-
-      <section className="panel">
-        {clients.length === 0 ? (
-          <p className="text-[var(--muted)]">No clients yet.</p>
-        ) : (
-          <ul className="divide-y divide-[var(--line)]">
-            {clients.map((client) => (
-              <li key={client.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                <div>
-                  <p className="font-semibold">{client.name}</p>
-                  <p className="text-sm text-[var(--muted)]">
-                    {client.email}
-                    {client.company ? ` · ${client.company}` : ""}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {notice ? <p className="rounded-xl bg-[rgba(31,122,77,0.12)] px-4 py-3 text-sm text-[var(--ok)]">{notice}</p> : null}
+      <ClientForm error={error} pending={pending} onSubmit={onSubmit} />
+      <ClientList clients={clients} onSave={saveClient} />
     </main>
   );
 }

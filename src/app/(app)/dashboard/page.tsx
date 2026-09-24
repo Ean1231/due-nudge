@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { differenceInCalendarDays, startOfDay } from "date-fns";
+import { RecentReminders } from "@/components/dashboard/recent-reminders";
+import { DashboardStats } from "@/components/dashboard/stats";
+import { UnpaidInvoices } from "@/components/dashboard/unpaid-invoices";
 import { prisma } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
-import { requireUser } from "@/lib/session";
-import { hasActiveSubscription, isBillingRequired } from "@/lib/reminders";
+import { getAppUser } from "@/lib/session";
+import { hasAppAccess, isBillingRequired } from "@/lib/billing/status";
 
 export default async function DashboardPage() {
-  const user = await requireUser();
+  const user = await getAppUser();
   if (!user) redirect("/login");
-
-  if (isBillingRequired() && !hasActiveSubscription(user.subscriptionStatus)) {
+  if (isBillingRequired() && !hasAppAccess(user.subscriptionStatus)) {
     redirect("/billing");
   }
 
-  const [unpaid, clients, recentReminders] = await Promise.all([
+  const [unpaid, clientCount, recentReminders] = await Promise.all([
     prisma.invoice.findMany({
       where: { userId: user.id, status: "unpaid" },
       include: { client: true, reminders: true },
@@ -29,8 +29,7 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const outstandingCents = unpaid.reduce((sum, inv) => sum + inv.amountCents, 0);
-  const today = startOfDay(new Date());
+  const outstandingCents = unpaid.reduce((sum, invoice) => sum + invoice.amountCents, 0);
 
   return (
     <main className="space-y-8">
@@ -50,93 +49,32 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="panel">
-          <p className="text-sm font-semibold text-[var(--muted)]">Outstanding</p>
-          <p className="display mt-2 text-3xl font-semibold">{formatMoney(outstandingCents)}</p>
-        </div>
-        <div className="panel">
-          <p className="text-sm font-semibold text-[var(--muted)]">Unpaid invoices</p>
-          <p className="display mt-2 text-3xl font-semibold">{unpaid.length}</p>
-        </div>
-        <div className="panel">
-          <p className="text-sm font-semibold text-[var(--muted)]">Clients</p>
-          <p className="display mt-2 text-3xl font-semibold">{clients}</p>
-        </div>
-      </div>
-
-      <section className="panel">
-        <h2 className="display text-2xl font-semibold">Unpaid invoices</h2>
-        {unpaid.length === 0 ? (
-          <p className="mt-3 text-[var(--muted)]">You&apos;re all caught up. Nice.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-[var(--muted)]">
-                <tr>
-                  <th className="pb-3 font-semibold">Invoice</th>
-                  <th className="pb-3 font-semibold">Client</th>
-                  <th className="pb-3 font-semibold">Amount</th>
-                  <th className="pb-3 font-semibold">Due</th>
-                  <th className="pb-3 font-semibold">Reminders</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unpaid.map((invoice) => {
-                  const days = differenceInCalendarDays(today, startOfDay(invoice.dueDate));
-                  return (
-                    <tr key={invoice.id} className="border-t border-[var(--line)]">
-                      <td className="py-3 font-semibold">{invoice.number}</td>
-                      <td className="py-3">{invoice.client.name}</td>
-                      <td className="py-3">
-                        {formatMoney(invoice.amountCents, invoice.currency)}
-                      </td>
-                      <td className="py-3">
-                        {invoice.dueDate.toLocaleDateString()}{" "}
-                        <span className="text-[var(--muted)]">
-                          ({days > 0 ? `${days}d overdue` : days === 0 ? "due today" : `in ${Math.abs(days)}d`})
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        {invoice.reminders.length
-                          ? invoice.reminders.map((r) => `+${r.milestone}`).join(", ")
-                          : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="panel">
-        <h2 className="display text-2xl font-semibold">Recent reminders</h2>
-        {recentReminders.length === 0 ? (
-          <p className="mt-3 text-[var(--muted)]">
-            No reminders sent yet. They go out automatically once invoices pass due+3 / +7 / +14.
+      {clientCount === 0 ? (
+        <section className="panel">
+          <h2 className="display text-2xl font-semibold">Start with a client</h2>
+          <p className="mt-2 text-[var(--muted)]">
+            Add the person who owes you, then log their invoice. DueNudge emails that address.
           </p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {recentReminders.map((log) => (
-              <li
-                key={log.id}
-                className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] pt-3 first:border-0 first:pt-0"
-              >
-                <span>
-                  <strong>{log.invoice.number}</strong> → {log.invoice.client.email} (+
-                  {log.milestone})
-                </span>
-                <span className="text-sm text-[var(--muted)]">
-                  {log.sentAt.toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <Link href="/clients" className="btn btn-primary mt-4">
+            Add a client
+          </Link>
+        </section>
+      ) : unpaid.length === 0 ? (
+        <section className="panel">
+          <h2 className="display text-2xl font-semibold">No unpaid invoices</h2>
+          <p className="mt-2 text-[var(--muted)]">Add an invoice when you send work out. Reminders follow from there.</p>
+          <Link href="/invoices" className="btn btn-primary mt-4">
+            Add an invoice
+          </Link>
+        </section>
+      ) : null}
+      <DashboardStats
+        outstandingCents={outstandingCents}
+        unpaidCount={unpaid.length}
+        clientCount={clientCount}
+      />
+      {unpaid.length > 0 ? <UnpaidInvoices invoices={unpaid} /> : null}
+      <RecentReminders logs={recentReminders} />
     </main>
   );
 }

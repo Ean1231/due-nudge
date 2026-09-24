@@ -1,50 +1,35 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { requireApiUser } from "@/lib/api/require-user";
+import { sendImmediateReminder } from "@/lib/invoices/immediate-reminder";
+import { createInvoiceSchema } from "@/lib/invoices/schema";
+import { parseDateInput } from "@/lib/dates";
 import { parseAmountToCents } from "@/lib/money";
-import { requireSubscribedUser } from "@/lib/session";
-
-const schema = z.object({
-  clientId: z.string().min(1),
-  number: z.string().min(1).max(64),
-  amount: z.string().min(1),
-  currency: z.string().length(3).default("usd"),
-  description: z.string().max(500).optional().nullable(),
-  dueDate: z.string().min(1),
-});
 
 export async function GET() {
-  const { user, reason } = await requireSubscribedUser();
-  if (reason === "unauthenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (reason === "billing") {
-    return NextResponse.json({ error: "Subscription required" }, { status: 402 });
-  }
+  const { user, error } = await requireApiUser();
+  if (error) return error;
 
   const invoices = await prisma.invoice.findMany({
-    where: { userId: user!.id },
-    include: {
-      client: true,
-      reminders: { orderBy: { milestone: "asc" } },
-    },
-    orderBy: [{ status: "asc" }, { dueDate: "asc" }],
+    where: { userId: user.id },
+    include: { client: true, reminders: { orderBy: { milestone: "asc" } } },
+    orderBy: { dueDate: "asc" },
+  });
+
+  invoices.sort((a, b) => {
+    if (a.status !== b.status) return a.status === "unpaid" ? -1 : 1;
+    return a.dueDate.getTime() - b.dueDate.getTime();
   });
 
   return NextResponse.json({ invoices });
 }
 
 export async function POST(request: Request) {
-  const { user, reason } = await requireSubscribedUser();
-  if (reason === "unauthenticated") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (reason === "billing") {
-    return NextResponse.json({ error: "Subscription required" }, { status: 402 });
-  }
+  const { user, error } = await requireApiUser();
+  if (error) return error;
 
   const body = await request.json().catch(() => null);
-  const parsed = schema.safeParse(body);
+  const parsed = createInvoiceSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid invoice details" }, { status: 400 });
   }
@@ -54,13 +39,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid amount" }, { status: 400 });
   }
 
-  const dueDate = new Date(parsed.data.dueDate);
+  const dueDate = parseDateInput(parsed.data.dueDate);
   if (Number.isNaN(dueDate.getTime())) {
     return NextResponse.json({ error: "Enter a valid due date" }, { status: 400 });
   }
 
   const client = await prisma.client.findFirst({
-    where: { id: parsed.data.clientId, userId: user!.id },
+    where: { id: parsed.data.clientId, userId: user.id },
   });
   if (!client) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
@@ -69,7 +54,7 @@ export async function POST(request: Request) {
   try {
     const invoice = await prisma.invoice.create({
       data: {
-        userId: user!.id,
+        userId: user.id,
         clientId: client.id,
         number: parsed.data.number.trim(),
         amountCents,
@@ -78,9 +63,15 @@ export async function POST(request: Request) {
         dueDate,
         status: "unpaid",
       },
+    });
+
+    const reminder = await sendImmediateReminder(user, client, invoice);
+    const withReminders = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
       include: { client: true, reminders: true },
     });
-    return NextResponse.json({ invoice }, { status: 201 });
+
+    return NextResponse.json({ invoice: withReminders, ...reminder }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Invoice number already exists for your account" },

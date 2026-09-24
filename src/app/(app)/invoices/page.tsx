@@ -1,33 +1,22 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { formatMoney } from "@/lib/money";
+import { InvoiceForm } from "@/components/invoices/invoice-form";
+import { InvoiceRow, InvoiceTable } from "@/components/invoices/invoice-table";
 
-type Client = { id: string; name: string; email: string };
-type Reminder = { milestone: number };
-type Invoice = {
-  id: string;
-  number: string;
-  amountCents: number;
-  currency: string;
-  dueDate: string;
-  status: string;
-  description: string | null;
-  client: Client;
-  reminders: Reminder[];
-};
+type ClientOption = { id: string; name: string };
 
 export default function InvoicesPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [nudgingId, setNudgingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"unpaid" | "paid" | "all">("unpaid");
 
   async function load() {
-    const [clientsRes, invoicesRes] = await Promise.all([
-      fetch("/api/clients"),
-      fetch("/api/invoices"),
-    ]);
+    const [clientsRes, invoicesRes] = await Promise.all([fetch("/api/clients"), fetch("/api/invoices")]);
     const clientsData = await clientsRes.json().catch(() => ({}));
     const invoicesData = await invoicesRes.json().catch(() => ({}));
     if (!clientsRes.ok || !invoicesRes.ok) {
@@ -46,6 +35,7 @@ export default function InvoicesPage() {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNotice(null);
     const form = event.currentTarget;
     const formData = new FormData(form);
     const res = await fetch("/api/invoices", {
@@ -66,12 +56,23 @@ export default function InvoicesPage() {
       setError(data.error || "Could not create invoice");
       return;
     }
+    const sentTo = data.invoice?.client?.email;
+    if (data.reminderStatus === "sent") {
+      setNotice(`Invoice saved. A reminder was emailed to ${sentTo}.`);
+    } else if (data.reminderStatus === "demo") {
+      setNotice("Invoice saved. Email is in demo mode, so the reminder was printed in the server console.");
+    } else if (data.reminderStatus === "failed") {
+      setError(`Invoice saved, but the reminder email failed: ${data.reminderError || "unknown error"}`);
+    } else {
+      setNotice("Invoice saved.");
+    }
     form.reset();
     await load();
   }
 
   async function markPaid(id: string, status: "paid" | "unpaid") {
     setError(null);
+    setNotice(null);
     const res = await fetch(`/api/invoices/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -82,119 +83,60 @@ export default function InvoicesPage() {
       setError(data.error || "Could not update invoice");
       return;
     }
+    setNotice(
+      status === "paid"
+        ? "Marked paid. No more reminders will be sent."
+        : "Marked unpaid. Scheduled reminders can send again.",
+    );
     await load();
   }
+
+  async function nudge(id: string) {
+    setError(null);
+    setNotice(null);
+    setNudgingId(id);
+    const res = await fetch(`/api/invoices/${id}/remind`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    setNudgingId(null);
+    if (!res.ok) {
+      setError(data.error || "Could not send reminder");
+      return;
+    }
+    setNotice(data.demo ? "Reminder logged in the server console." : `Reminder sent to ${data.to}.`);
+    await load();
+  }
+
+  const visible = invoices.filter((invoice) => filter === "all" || invoice.status === filter);
 
   return (
     <main className="space-y-8">
       <div>
         <h1 className="display text-4xl font-semibold">Invoices</h1>
-        <p className="mt-2 text-[var(--muted)]">
-          Log what&apos;s owed. Reminders fire automatically after the due date.
+        <p className="mt-2 max-w-2xl text-[var(--muted)]">
+          Saving an invoice emails the client right away. If it stays unpaid, DueNudge emails again 3, 7,
+          and 14 days after the due date. Mark it paid to stop later reminders.
         </p>
       </div>
-
-      <form onSubmit={onSubmit} className="panel grid gap-4 md:grid-cols-2">
-        <div className="field">
-          <label htmlFor="clientId">Client</label>
-          <select id="clientId" name="clientId" required defaultValue="">
-            <option value="" disabled>
-              Select a client
-            </option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="number">Invoice number</label>
-          <input id="number" name="number" placeholder="INV-1001" required />
-        </div>
-        <div className="field">
-          <label htmlFor="amount">Amount (USD)</label>
-          <input id="amount" name="amount" placeholder="1250.00" required />
-        </div>
-        <div className="field">
-          <label htmlFor="dueDate">Due date</label>
-          <input id="dueDate" name="dueDate" type="date" required />
-        </div>
-        <div className="field md:col-span-2">
-          <label htmlFor="description">Description (optional)</label>
-          <input id="description" name="description" placeholder="Website redesign — March" />
-        </div>
-        <div className="md:col-span-2">
-          {error ? <p className="mb-3 text-sm text-[var(--danger)]">{error}</p> : null}
-          <button className="btn btn-primary" type="submit" disabled={pending || clients.length === 0}>
-            {pending ? "Saving…" : "Add invoice"}
+      {notice ? <p className="rounded-xl bg-[rgba(31,122,77,0.12)] px-4 py-3 text-sm text-[var(--ok)]">{notice}</p> : null}
+      <InvoiceForm clients={clients} error={error} pending={pending} onSubmit={onSubmit} />
+      <div className="flex gap-2">
+        {(["unpaid", "paid", "all"] as const).map((value) => (
+          <button
+            key={value}
+            className={filter === value ? "btn btn-primary" : "btn btn-ghost"}
+            type="button"
+            onClick={() => setFilter(value)}
+          >
+            {value === "all" ? "All" : value === "paid" ? "Paid" : "Unpaid"}
           </button>
-          {clients.length === 0 ? (
-            <p className="mt-2 text-sm text-[var(--muted)]">Add a client first.</p>
-          ) : null}
-        </div>
-      </form>
-
-      <section className="panel overflow-x-auto">
-        {invoices.length === 0 ? (
-          <p className="text-[var(--muted)]">No invoices yet.</p>
-        ) : (
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="text-[var(--muted)]">
-              <tr>
-                <th className="pb-3 font-semibold">Invoice</th>
-                <th className="pb-3 font-semibold">Client</th>
-                <th className="pb-3 font-semibold">Amount</th>
-                <th className="pb-3 font-semibold">Due</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold">Reminders</th>
-                <th className="pb-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-[var(--line)]">
-                  <td className="py-3 font-semibold">{invoice.number}</td>
-                  <td className="py-3">{invoice.client.name}</td>
-                  <td className="py-3">
-                    {formatMoney(invoice.amountCents, invoice.currency)}
-                  </td>
-                  <td className="py-3">{new Date(invoice.dueDate).toLocaleDateString()}</td>
-                  <td className="py-3">
-                    <span className={`badge ${invoice.status === "paid" ? "badge-paid" : "badge-unpaid"}`}>
-                      {invoice.status}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    {invoice.reminders.length
-                      ? invoice.reminders.map((r) => `+${r.milestone}`).join(", ")
-                      : "—"}
-                  </td>
-                  <td className="py-3">
-                    {invoice.status === "unpaid" ? (
-                      <button
-                        className="btn btn-ghost"
-                        type="button"
-                        onClick={() => void markPaid(invoice.id, "paid")}
-                      >
-                        Mark paid
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-ghost"
-                        type="button"
-                        onClick={() => void markPaid(invoice.id, "unpaid")}
-                      >
-                        Mark unpaid
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+        ))}
+      </div>
+      <InvoiceTable
+        invoices={visible}
+        nudgingId={nudgingId}
+        onStatusChange={(id, status) => void markPaid(id, status)}
+        onNudge={(id) => void nudge(id)}
+      />
     </main>
   );
 }

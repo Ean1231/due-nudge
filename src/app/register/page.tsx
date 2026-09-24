@@ -4,6 +4,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -49,12 +50,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-      <Link href="/" className="display mb-8 text-2xl font-semibold">
-        DueNudge
-      </Link>
-      <h1 className="display text-3xl font-semibold">Create your account</h1>
-      <p className="mt-2 text-[var(--muted)]">7-day free trial, then $12/mo.</p>
+    <AuthShell
+      title="Create your account"
+      subtitle="7-day free trial, then $12/mo."
+      footer={
+        <>
+          Already registered? <Link href="/login">Log in</Link>
+        </>
+      }
+    >
       <form onSubmit={onSubmit} className="panel mt-8 space-y-4">
         <div className="field">
           <label htmlFor="name">Your name</label>
@@ -70,23 +74,13 @@ export default function RegisterPage() {
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
+          <input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
         </div>
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
         <button className="btn btn-primary w-full" type="submit" disabled={pending}>
           {pending ? "Creating…" : "Create account"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-[var(--muted)]">
-        Already registered? <Link href="/login">Log in</Link>
-      </p>
-    </main>
+    </AuthShell>
   );
 }

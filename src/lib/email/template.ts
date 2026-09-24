@@ -1,35 +1,7 @@
-import { Resend } from "resend";
 import { formatMoney } from "@/lib/money";
+import type { ReminderEmailContent, ReminderEmailPayload } from "@/lib/email/types";
 
-export function isEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY);
-}
-
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is not set");
-  return new Resend(key);
-}
-
-export type ReminderEmailPayload = {
-  to: string;
-  clientName: string;
-  businessName: string;
-  invoiceNumber: string;
-  amountCents: number;
-  currency: string;
-  dueDate: Date;
-  milestone: number;
-};
-
-export async function sendInvoiceReminder(payload: ReminderEmailPayload) {
-  const subject =
-    payload.milestone === 3
-      ? `Friendly reminder: invoice ${payload.invoiceNumber} is overdue`
-      : payload.milestone === 7
-        ? `Follow-up: invoice ${payload.invoiceNumber} still unpaid`
-        : `Final reminder: invoice ${payload.invoiceNumber} is ${payload.milestone} days overdue`;
-
+export function buildReminderEmail(payload: ReminderEmailPayload): ReminderEmailContent {
   const amount = formatMoney(payload.amountCents, payload.currency);
   const due = payload.dueDate.toLocaleDateString("en-US", {
     year: "numeric",
@@ -44,7 +16,7 @@ export async function sendInvoiceReminder(payload: ReminderEmailPayload) {
     "",
     "Please arrange payment at your earliest convenience. If you've already paid, you can ignore this message.",
     "",
-    `Thanks,`,
+    "Thanks,",
     payload.businessName,
   ].join("\n");
 
@@ -57,26 +29,20 @@ export async function sendInvoiceReminder(payload: ReminderEmailPayload) {
     </div>
   `;
 
-  if (!isEmailConfigured()) {
-    console.log("[DueNudge email demo]", { to: payload.to, subject, text });
-    return { id: `demo-${Date.now()}` };
+  return { subject: reminderSubject(payload), text, html };
+}
+
+function reminderSubject(payload: ReminderEmailPayload) {
+  if (payload.milestone === 0 || payload.milestone >= 100) {
+    return `Invoice reminder: ${payload.invoiceNumber} from ${payload.businessName}`;
   }
-
-  const resend = getResend();
-  const from = process.env.EMAIL_FROM || "DueNudge <onboarding@resend.dev>";
-  const result = await resend.emails.send({
-    from,
-    to: payload.to,
-    subject,
-    text,
-    html,
-  });
-
-  if (result.error) {
-    throw new Error(result.error.message);
+  if (payload.milestone === 3) {
+    return `Friendly reminder: invoice ${payload.invoiceNumber} is overdue`;
   }
-
-  return result.data;
+  if (payload.milestone === 7) {
+    return `Follow-up: invoice ${payload.invoiceNumber} still unpaid`;
+  }
+  return `Final reminder: invoice ${payload.invoiceNumber} is ${payload.milestone} days overdue`;
 }
 
 function escapeHtml(value: string) {

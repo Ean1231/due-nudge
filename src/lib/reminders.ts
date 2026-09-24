@@ -57,10 +57,3 @@ export async function processDueReminders(now = new Date()) {
   return { checked: unpaid.length, sent, errors };
 }
 
-export function hasActiveSubscription(status: string | null | undefined) {
-  return status === "active" || status === "trialing";
-}
-
-export function isBillingRequired() {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
-}
