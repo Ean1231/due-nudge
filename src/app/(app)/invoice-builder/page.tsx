@@ -1,7 +1,25 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { invoiceBuilderSchema } from "@/lib/invoice-builder/schema";
 import { INVOICE_TEMPLATES } from "@/lib/invoice-builder/templates";
+import { getAppUser } from "@/lib/session";
 
-export default function InvoiceBuilderTemplatesPage() {
+export default async function InvoiceBuilderTemplatesPage() {
+  const user = await getAppUser();
+  if (!user) redirect("/login");
+  const saved = await prisma.invoice.findMany({
+    where: { userId: user.id, invoiceData: { not: { equals: null } } },
+    select: { id: true, number: true, invoiceData: true, client: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+  const templates = saved.flatMap((invoice) => {
+    const parsed = invoiceBuilderSchema.safeParse(invoice.invoiceData);
+    if (!parsed.success) return [];
+    return [{ id: invoice.id, number: invoice.number, clientName: invoice.client.name, design: parsed.data.templateId }];
+  });
+
   return (
     <main className="space-y-8">
       <div>
@@ -11,6 +29,28 @@ export default function InvoiceBuilderTemplatesPage() {
           Fill in the invoice, download the PDF, then send it when you are ready. Later reminders use the same PDF.
         </p>
       </div>
+      {templates.length > 0 ? (
+        <section className="panel space-y-3">
+          <h2 className="display text-2xl font-semibold">Saved invoices</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Start a new invoice from one you already created. Dates and the invoice number stay blank so you can set them for this job.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {templates.map((template) => (
+              <Link
+                key={template.id}
+                href={`/invoice-builder/new?from=${template.id}`}
+                className="rounded-xl border border-[var(--line)] px-4 py-3 hover:border-[var(--brand)]"
+              >
+                <span className="font-semibold">{template.number}</span>
+                <span className="mt-1 block text-sm text-[var(--muted)]">
+                  {template.clientName} · {INVOICE_TEMPLATES.find((item) => item.id === template.design)?.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {INVOICE_TEMPLATES.map((template) => (
           <Link

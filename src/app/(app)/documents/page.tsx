@@ -61,6 +61,11 @@ export default async function DocumentsPage() {
                       <a className="font-semibold text-[var(--brand)]" href={`/api/invoices/${document.id}/attachment`}>
                         Download
                       </a>
+                      {document.invoiceData ? (
+                        <Link className="font-semibold text-[var(--brand)]" href={`/invoice-builder/new?from=${document.id}`}>
+                          Use again
+                        </Link>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

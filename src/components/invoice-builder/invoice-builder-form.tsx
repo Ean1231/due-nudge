@@ -15,17 +15,24 @@ export function InvoiceBuilderForm({
   initialBusinessEmail,
   initialIssueDate,
   initialDueDate,
+  saved = null,
 }: {
   templateId: InvoiceBuilderInput["templateId"];
   initialBusinessName: string;
   initialBusinessEmail: string;
   initialIssueDate: string;
   initialDueDate: string;
+  saved?: InvoiceBuilderInput | null;
 }) {
-  const [items, setItems] = useState<LineItem[]>([
-    { id: "initial", description: "", quantity: "1", unitPrice: "" },
-  ]);
-  const [taxRate, setTaxRate] = useState("0");
+  const [items, setItems] = useState<LineItem[]>(
+    saved?.lineItems.map((item, index) => ({
+      id: `saved-${index}`,
+      description: item.description,
+      quantity: String(item.quantity),
+      unitPrice: String(item.unitPrice),
+    })) || [{ id: "initial", description: "", quantity: "1", unitPrice: "" }],
+  );
+  const [taxRate, setTaxRate] = useState(saved ? String(saved.taxRate) : "0");
   const [step, setStep] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,8 +205,8 @@ export function InvoiceBuilderForm({
         <FormSection title="Your business">
           <Field label="Business name" name="businessName" defaultValue={initialBusinessName} required />
           <Field label="Business email" name="businessEmail" type="email" defaultValue={initialBusinessEmail} required />
-          <Field label="Business phone" name="businessPhone" />
-          <TextArea label="Business address" name="businessAddress" required />
+          <Field label="Business phone" name="businessPhone" defaultValue={saved?.businessPhone || ""} />
+          <TextArea label="Business address" name="businessAddress" defaultValue={saved?.businessAddress || ""} required />
           <div className="field md:col-span-2">
             <label htmlFor="logo">Business logo (optional PNG/JPEG, maximum 500 KB)</label>
             <input id="logo" name="logo" type="file" accept="image/png,image/jpeg" />
@@ -209,16 +216,16 @@ export function InvoiceBuilderForm({
 
       <div data-step="1" hidden={step !== 1}>
         <FormSection title="Client details">
-          <Field label="Client name" name="clientName" required />
-          <Field label="Client email" name="clientEmail" type="email" required />
-          <Field label="Client phone" name="clientPhone" />
-          <TextArea label="Client address" name="clientAddress" required />
+          <Field label="Client name" name="clientName" defaultValue={saved?.clientName || ""} required />
+          <Field label="Client email" name="clientEmail" type="email" defaultValue={saved?.clientEmail || ""} required />
+          <Field label="Client phone" name="clientPhone" defaultValue={saved?.clientPhone || ""} />
+          <TextArea label="Client address" name="clientAddress" defaultValue={saved?.clientAddress || ""} required />
         </FormSection>
       </div>
 
       <div data-step="2" hidden={step !== 2}>
         <FormSection title="Invoice details">
-          <Field label="Invoice number" name="invoiceNumber" placeholder="INV-1001" required />
+          <Field label="Invoice number" name="invoiceNumber" placeholder={saved?.invoiceNumber || "INV-1001"} required />
           <Field label="Invoice date" name="issueDate" type="date" defaultValue={initialIssueDate} required />
           <Field label="Due date" name="dueDate" type="date" defaultValue={initialDueDate} required />
           <Field
@@ -300,12 +307,13 @@ export function InvoiceBuilderForm({
 
       <div data-step="4" hidden={step !== 4}>
         <FormSection title="Finish invoice">
-          <TextArea label="Payment terms" name="paymentTerms" placeholder="Payment by bank transfer within 14 days." />
-          <TextArea label="Notes" name="notes" placeholder="Thank you for your business." />
+          <TextArea label="Payment terms" name="paymentTerms" defaultValue={saved?.paymentTerms || ""} placeholder="Payment by bank transfer within 14 days." />
+          <TextArea label="Notes" name="notes" defaultValue={saved?.notes || ""} placeholder="Thank you for your business." />
           <Field
             label="Signature (initial and surname)"
             name="signatureName"
             placeholder="J. Smith"
+            defaultValue={saved?.signatureName || ""}
             required
           />
           <p className="text-sm text-[var(--muted)] md:col-span-2">
