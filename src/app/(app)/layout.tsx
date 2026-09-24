@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app/app-header";
+import { getSendAllowance } from "@/lib/billing/allowance";
 import { getAppUser } from "@/lib/session";
-import { hasAppAccess, isBillingRequired, needsPaymentUpdate } from "@/lib/billing/status";
+import { isBillingRequired, needsPaymentUpdate } from "@/lib/billing/status";
+import { FREE_SENDS } from "@/lib/plan";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
   if (!user) redirect("/login");
 
-  const lockedOut = isBillingRequired() && !hasAppAccess(user.subscriptionStatus);
+  const allowance = await getSendAllowance(user);
   const paymentFailed = isBillingRequired() && needsPaymentUpdate(user.subscriptionStatus);
 
   return (
@@ -21,11 +23,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Update your card
           </Link>
         </div>
-      ) : lockedOut ? (
+      ) : allowance.limited && allowance.blocked ? (
         <div className="border-b border-[var(--line)] bg-[#fff7df] px-6 py-3 text-center text-sm">
-          Start your 7-day trial to send reminders.{" "}
+          You&apos;ve used your {FREE_SENDS} free reminders.{" "}
           <Link href="/billing" className="font-semibold underline">
-            Go to billing
+            Subscribe to keep sending
+          </Link>
+        </div>
+      ) : allowance.limited ? (
+        <div className="border-b border-[var(--line)] bg-[#fff7df] px-6 py-3 text-center text-sm">
+          {allowance.remaining} of {FREE_SENDS} free reminders left.{" "}
+          <Link href="/billing" className="font-semibold underline">
+            Subscribe for unlimited
           </Link>
         </div>
       ) : null}

@@ -100,7 +100,7 @@ export function BillingPanel({ status }: { status: string }) {
         <p className="mt-2 text-[var(--muted)]">
           {subscribed
             ? `${PLAN.name} is ${PLAN.priceLabel}.`
-            : `${PLAN.name} is ${PLAN.priceLabel}. Includes a 7-day free trial.`}
+            : `${PLAN.name} is ${PLAN.priceLabel}. Your first 3 reminders are free, then a 7-day trial.`}
         </p>
       </div>
       <div className="panel space-y-4">
@@ -143,7 +143,7 @@ export function BillingPanel({ status }: { status: string }) {
           ) : (
             <>
               <button className="btn btn-primary" type="button" disabled={pending !== null} onClick={() => void startCheckout()}>
-                {pending === "checkout" ? "Redirecting…" : "Start 7-day trial"}
+                {pending === "checkout" ? "Redirecting…" : "Subscribe"}
               </button>
               <button className="btn btn-ghost" type="button" disabled={pending !== null} onClick={() => void confirmPayment()}>
                 {pending === "sync" ? "Checking…" : "Confirm payment"}

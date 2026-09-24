@@ -5,14 +5,10 @@ import { DashboardStats } from "@/components/dashboard/stats";
 import { UnpaidInvoices } from "@/components/dashboard/unpaid-invoices";
 import { prisma } from "@/lib/db";
 import { getAppUser } from "@/lib/session";
-import { hasAppAccess, isBillingRequired } from "@/lib/billing/status";
 
 export default async function DashboardPage() {
   const user = await getAppUser();
   if (!user) redirect("/login");
-  if (isBillingRequired() && !hasAppAccess(user.subscriptionStatus)) {
-    redirect("/billing");
-  }
 
   const [unpaid, clientCount, recentReminders] = await Promise.all([
     prisma.invoice.findMany({

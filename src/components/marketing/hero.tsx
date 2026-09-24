@@ -13,13 +13,15 @@ export function Hero() {
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link href="/register" className="btn btn-primary">
-            Start a 7-day trial
+            Send 3 reminders free
           </Link>
           <a href="#how" className="btn btn-ghost">
             How it works
           </a>
         </div>
-        <p className="mt-3 text-sm text-[var(--muted)]">{PLAN.priceLabel} after the trial. Cancel when you want.</p>
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          {PLAN.priceLabel} after 3 free reminders. A 7-day trial starts when you subscribe.
+        </p>
       </div>
       <aside className="panel">
         <p className="text-sm font-semibold text-[var(--muted)]">What gets sent</p>

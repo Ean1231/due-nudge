@@ -45,14 +45,14 @@ export default function RegisterPage() {
       setError("Account created, but login failed. Try logging in.");
       return;
     }
-    router.push("/billing");
+    router.push("/dashboard");
     router.refresh();
   }
 
   return (
     <AuthShell
       title="Create your account"
-      subtitle="7-day free trial, then $12/mo."
+      subtitle="3 reminder emails free. Then $12/mo."
       footer={
         <>
           Already registered? <Link href="/login">Log in</Link>

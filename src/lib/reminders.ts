@@ -1,4 +1,5 @@
 import { addDays, startOfDay } from "date-fns";
+import { getSendAllowance } from "@/lib/billing/allowance";
 import { prisma } from "@/lib/db";
 import { sendInvoiceReminder } from "@/lib/email";
 
@@ -22,11 +23,16 @@ export async function processDueReminders(now = new Date()) {
     const due = startOfDay(invoice.dueDate);
     const sentMilestones = new Set(invoice.reminders.map((r) => r.milestone));
 
+    const allowance = await getSendAllowance(invoice.user);
+    if (allowance.blocked) continue;
+
     for (const milestone of REMINDER_MILESTONES) {
       if (sentMilestones.has(milestone)) continue;
 
       const sendOn = addDays(due, milestone);
       if (today < sendOn) continue;
+
+      if ((await getSendAllowance(invoice.user)).blocked) break;
 
       try {
         await sendInvoiceReminder({

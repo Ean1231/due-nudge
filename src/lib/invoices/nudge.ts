@@ -1,4 +1,5 @@
 import type { Client, Invoice, ReminderLog, User } from "@prisma/client";
+import { freeSendLimitMessage, getSendAllowance } from "@/lib/billing/allowance";
 import { prisma } from "@/lib/db";
 import { sendInvoiceReminder } from "@/lib/email";
 
@@ -17,6 +18,11 @@ export async function sendManualReminder(
 
   if (latest && Date.now() - latest.getTime() < DAY_MS) {
     return { ok: false as const, error: "This client was already emailed about this invoice in the last 24 hours." };
+  }
+
+  const allowance = await getSendAllowance(user);
+  if (allowance.blocked) {
+    return { ok: false as const, error: freeSendLimitMessage(), limit: true as const };
   }
 
   const manualCount = reminders.filter((reminder) => reminder.milestone >= 100).length;

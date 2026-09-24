@@ -63,6 +63,8 @@ export default function InvoicesPage() {
       setNotice("Invoice saved. Email is in demo mode, so the reminder was printed in the server console.");
     } else if (data.reminderStatus === "failed") {
       setError(`Invoice saved, but the reminder email failed: ${data.reminderError || "unknown error"}`);
+    } else if (data.reminderStatus === "limit") {
+      setError(data.reminderError || "Subscribe to send more reminders.");
     } else {
       setNotice("Invoice saved.");
     }

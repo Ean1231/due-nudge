@@ -11,7 +11,7 @@ export function SiteHeader() {
           Log in
         </Link>
         <Link href="/register" className="btn btn-primary">
-          Start free trial
+          Try 3 free
         </Link>
       </nav>
     </header>

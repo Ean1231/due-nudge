@@ -1,8 +1,9 @@
 import type { Client, Invoice, User } from "@prisma/client";
+import { freeSendLimitMessage, getSendAllowance } from "@/lib/billing/allowance";
 import { prisma } from "@/lib/db";
 import { sendInvoiceReminder } from "@/lib/email";
 
-export type ReminderStatus = "sent" | "demo" | "failed";
+export type ReminderStatus = "sent" | "demo" | "failed" | "limit";
 
 export async function sendImmediateReminder(
   user: User,
@@ -11,6 +12,11 @@ export async function sendImmediateReminder(
 ) {
   let reminderStatus: ReminderStatus = "failed";
   let reminderError: string | null = null;
+
+  const allowance = await getSendAllowance(user);
+  if (allowance.blocked) {
+    return { reminderStatus: "limit" as const, reminderError: freeSendLimitMessage() };
+  }
 
   try {
     const emailResult = await sendInvoiceReminder({

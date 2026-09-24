@@ -8,7 +8,7 @@ export function PricingCta() {
         <div>
           <h2 className="display text-3xl">{PLAN.priceLabel}</h2>
           <p className="mt-2 text-[var(--muted)]">
-            {PLAN.name}. Seven days free, then the monthly price. One subscription per account.
+            {PLAN.name}. Three reminder emails free, then the monthly price. One subscription per account.
           </p>
         </div>
         <Link href="/register" className="btn btn-primary">
