@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PDF_BYTES, validateInvoicePdf } from "@/lib/invoices/attachment";
+import { MAX_PDF_BYTES, validateInvoicePdf, validateSourceDocument } from "@/lib/invoices/attachment";
 
 describe("invoice PDF validation", () => {
   it("accepts a PDF with the correct signature", () => {
@@ -23,5 +23,22 @@ describe("invoice PDF validation", () => {
         Buffer.from("%PDF-"),
       ),
     ).toThrow("smaller than 3 MB");
+  });
+
+  it("accepts valid DOCX source documents", () => {
+    expect(() =>
+      validateSourceDocument(
+        "invoice.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        8,
+        Buffer.from("PK\u0003\u0004test"),
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects a renamed unsafe source document", () => {
+    expect(() =>
+      validateSourceDocument("invoice.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 8, Buffer.from("not-zip")),
+    ).toThrow("valid PDF, DOC, or DOCX");
   });
 });

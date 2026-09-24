@@ -15,7 +15,7 @@ export async function sendViaGmail(input: {
   fromName: string;
   to: string;
   content: ReminderEmailContent;
-  attachment?: { filename: string; contentType: string; data: Buffer };
+  attachments?: Array<{ filename: string; contentType: string; data: Buffer }>;
 }) {
   const accessToken = await gmailAccessToken(decryptGmailToken(input.refreshToken));
   const raw = buildRawMessage(input);
@@ -49,8 +49,9 @@ function buildRawMessage(input: {
   fromName: string;
   to: string;
   content: ReminderEmailContent;
-  attachment?: { filename: string; contentType: string; data: Buffer };
+  attachments?: Array<{ filename: string; contentType: string; data: Buffer }>;
 }) {
+  const hasAttachments = Boolean(input.attachments?.length);
   const mixedBoundary = `due-nudge-mixed-${Date.now()}`;
   const alternativeBoundary = `due-nudge-alternative-${Date.now()}`;
   const from = `${encodeHeader(input.fromName)} <${input.fromEmail}>`;
@@ -59,11 +60,11 @@ function buildRawMessage(input: {
     `To: ${input.to}`,
     `Subject: ${encodeHeader(input.content.subject)}`,
     "MIME-Version: 1.0",
-    `Content-Type: ${input.attachment ? `multipart/mixed; boundary="${mixedBoundary}"` : `multipart/alternative; boundary="${alternativeBoundary}"`}`,
+    `Content-Type: ${hasAttachments ? `multipart/mixed; boundary="${mixedBoundary}"` : `multipart/alternative; boundary="${alternativeBoundary}"`}`,
     "",
   ];
   const alternative = [
-    ...(input.attachment
+    ...(hasAttachments
       ? [`--${mixedBoundary}`, `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`, ""]
       : []),
     `--${alternativeBoundary}`,
@@ -79,19 +80,21 @@ function buildRawMessage(input: {
     `--${alternativeBoundary}--`,
     "",
   ];
-  const attachment = input.attachment
+  const attachments = hasAttachments
     ? [
+        ...input.attachments!.flatMap((attachment) => [
         `--${mixedBoundary}`,
-        `Content-Type: ${input.attachment.contentType}; name="${safeHeaderFilename(input.attachment.filename)}"`,
-        `Content-Disposition: attachment; filename="${safeHeaderFilename(input.attachment.filename)}"`,
+        `Content-Type: ${attachment.contentType}; name="${safeHeaderFilename(attachment.filename)}"`,
+        `Content-Disposition: attachment; filename="${safeHeaderFilename(attachment.filename)}"`,
         "Content-Transfer-Encoding: base64",
         "",
-        wrapBase64(input.attachment.data.toString("base64")),
+        wrapBase64(attachment.data.toString("base64")),
+        ]),
         `--${mixedBoundary}--`,
         "",
       ]
     : [];
-  const message = [...headers, ...alternative, ...attachment].join("\r\n");
+  const message = [...headers, ...alternative, ...attachments].join("\r\n");
   return Buffer.from(message).toString("base64url");
 }
 

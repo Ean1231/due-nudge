@@ -4,7 +4,12 @@ import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api/require-user";
 import { invoiceBuilderSchema, invoiceTotals } from "@/lib/invoice-builder/schema";
 import { generateInvoicePdf } from "@/lib/invoice-builder/pdf";
-import { deleteInvoicePdf, storeGeneratedInvoicePdf } from "@/lib/invoices/attachment";
+import { readInvoiceLogo } from "@/lib/invoice-builder/assets";
+import {
+  deleteInvoicePdf,
+  storeGeneratedInvoicePdf,
+  storeSourceDocument,
+} from "@/lib/invoices/attachment";
 import { sendImmediateReminder } from "@/lib/invoices/immediate-reminder";
 
 export const runtime = "nodejs";
@@ -13,7 +18,16 @@ export async function POST(request: Request) {
   const { user, error } = await requireApiUser();
   if (error) return error;
 
-  const parsed = invoiceBuilderSchema.safeParse(await request.json().catch(() => null));
+  const form = await request.formData().catch(() => null);
+  if (!form) return NextResponse.json({ error: "Invalid invoice submission." }, { status: 400 });
+  const payload = form.get("payload");
+  let payloadData: unknown = null;
+  try {
+    payloadData = typeof payload === "string" ? JSON.parse(payload) : null;
+  } catch {
+    return NextResponse.json({ error: "Invalid invoice submission." }, { status: 400 });
+  }
+  const parsed = invoiceBuilderSchema.safeParse(payloadData);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message || "Invalid invoice details" },
@@ -28,15 +42,24 @@ export async function POST(request: Request) {
   }
 
   let attachmentPath: string | null = null;
+  let sourceDocumentPath: string | null = null;
   let invoiceCreated = false;
   try {
-    const pdf = await generateInvoicePdf(data);
+    const logoFile = form.get("logo");
+    const logo = logoFile instanceof File && logoFile.size > 0 ? await readInvoiceLogo(logoFile) : undefined;
+    const pdf = await generateInvoicePdf(data, logo);
     const attachment = await storeGeneratedInvoicePdf(
       user.id,
       `invoice-${data.invoiceNumber}.pdf`,
       pdf,
     );
     attachmentPath = attachment.path;
+    const sourceFile = form.get("sourceDocument");
+    const sourceDocument =
+      sourceFile instanceof File && sourceFile.size > 0
+        ? await storeSourceDocument(user.id, sourceFile)
+        : null;
+    sourceDocumentPath = sourceDocument?.path || null;
 
     const result = await prisma.$transaction(async (tx) => {
       const normalizedEmail = data.clientEmail.toLowerCase();
@@ -79,6 +102,10 @@ export async function POST(request: Request) {
           attachmentName: attachment.name,
           attachmentSize: attachment.size,
           attachmentContentType: attachment.contentType,
+          sourceDocumentPath: sourceDocument?.path,
+          sourceDocumentName: sourceDocument?.name,
+          sourceDocumentSize: sourceDocument?.size,
+          sourceDocumentContentType: sourceDocument?.contentType,
         },
       });
       return { client, invoice };
@@ -105,6 +132,11 @@ export async function POST(request: Request) {
     if (attachmentPath && !invoiceCreated) {
       await deleteInvoicePdf(attachmentPath).catch((cleanupError) => {
         console.error("[DueNudge] Could not clean up generated invoice PDF:", cleanupError);
+      });
+    }
+    if (sourceDocumentPath && !invoiceCreated) {
+      await deleteInvoicePdf(sourceDocumentPath).catch((cleanupError) => {
+        console.error("[DueNudge] Could not clean up original invoice file:", cleanupError);
       });
     }
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

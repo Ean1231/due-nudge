@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont, type RGB } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFImage, type PDFPage, type PDFFont, type RGB } from "pdf-lib";
 import { formatMoney } from "@/lib/money";
 import { invoiceTotals, type InvoiceBuilderInput } from "@/lib/invoice-builder/schema";
 
@@ -11,16 +11,16 @@ type Palette = {
 
 const palettes: Record<InvoiceBuilderInput["templateId"], Palette> = {
   classic: {
-    ink: rgb(0.08, 0.13, 0.22),
-    muted: rgb(0.35, 0.4, 0.48),
-    accent: rgb(0.07, 0.22, 0.42),
-    tint: rgb(0.92, 0.95, 0.98),
+    ink: rgb(0.06, 0.16, 0.13),
+    muted: rgb(0.28, 0.4, 0.36),
+    accent: rgb(0.02, 0.56, 0.42),
+    tint: rgb(0.9, 0.97, 0.95),
   },
   modern: {
-    ink: rgb(0.08, 0.15, 0.14),
-    muted: rgb(0.35, 0.45, 0.43),
-    accent: rgb(0.02, 0.55, 0.45),
-    tint: rgb(0.9, 0.98, 0.96),
+    ink: rgb(0.06, 0.1, 0.16),
+    muted: rgb(0.35, 0.38, 0.43),
+    accent: rgb(0.06, 0.3, 0.65),
+    tint: rgb(0.92, 0.95, 0.99),
   },
   minimal: {
     ink: rgb(0.08, 0.08, 0.08),
@@ -36,7 +36,10 @@ const palettes: Record<InvoiceBuilderInput["templateId"], Palette> = {
   },
 };
 
-export async function generateInvoicePdf(data: InvoiceBuilderInput) {
+export async function generateInvoicePdf(
+  data: InvoiceBuilderInput,
+  logo?: { bytes: Buffer; contentType: "image/png" | "image/jpeg" },
+) {
   const document = await PDFDocument.create();
   document.setTitle(`Invoice ${safeText(data.invoiceNumber)}`);
   document.setAuthor(safeText(data.businessName));
@@ -45,13 +48,19 @@ export async function generateInvoicePdf(data: InvoiceBuilderInput) {
   const page = document.addPage([595.28, 841.89]);
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const signatureFont = await document.embedFont(StandardFonts.TimesRomanItalic);
+  const logoImage = logo
+    ? logo.contentType === "image/png"
+      ? await document.embedPng(logo.bytes)
+      : await document.embedJpg(logo.bytes)
+    : null;
   const palette = palettes[data.templateId];
 
   drawTemplateFrame(page, data.templateId, palette);
-  drawHeader(page, data, regular, bold, palette);
+  drawHeader(page, data, regular, bold, palette, logoImage);
   drawParties(page, data, regular, bold, palette);
   drawItems(page, data, regular, bold, palette);
-  drawFooter(page, data, regular, bold, palette);
+  drawFooter(page, data, regular, bold, signatureFont, palette);
 
   return Buffer.from(await document.save());
 }
@@ -62,15 +71,14 @@ function drawTemplateFrame(
   palette: Palette,
 ) {
   if (template === "classic") {
-    page.drawRectangle({ x: 0, y: 742, width: 595.28, height: 100, color: palette.accent });
+    page.drawLine({ start: { x: 42, y: 735 }, end: { x: 553, y: 735 }, thickness: 1.2, color: palette.accent });
   } else if (template === "modern") {
-    page.drawRectangle({ x: 0, y: 0, width: 18, height: 841.89, color: palette.accent });
-    page.drawRectangle({ x: 18, y: 742, width: 577.28, height: 100, color: palette.tint });
+    page.drawRectangle({ x: 12, y: 12, width: 571.28, height: 817.89, borderColor: palette.ink, borderWidth: 1.2 });
   } else if (template === "minimal") {
     page.drawLine({ start: { x: 42, y: 766 }, end: { x: 553, y: 766 }, thickness: 2, color: palette.accent });
   } else {
-    page.drawRectangle({ x: 0, y: 720, width: 595.28, height: 121.89, color: palette.tint });
-    page.drawRectangle({ x: 42, y: 740, width: 8, height: 66, color: palette.accent });
+    page.drawRectangle({ x: 0, y: 742, width: 595.28, height: 99.89, color: rgb(0.08, 0.07, 0.06) });
+    page.drawRectangle({ x: 42, y: 750, width: 8, height: 60, color: palette.accent });
   }
 }
 
@@ -80,19 +88,31 @@ function drawHeader(
   regular: PDFFont,
   bold: PDFFont,
   palette: Palette,
+  logo: PDFImage | null,
 ) {
-  const inverse = data.templateId === "classic" ? rgb(1, 1, 1) : palette.ink;
+  const inverse = data.templateId === "warm" ? rgb(1, 1, 1) : palette.ink;
   page.drawText("INVOICE", { x: 48, y: 786, size: 28, font: bold, color: inverse });
-  page.drawText(fitText(data.businessName, bold, 16, 250), {
-    x: 48,
+  const businessX = logo && data.templateId !== "classic" ? 130 : 48;
+  page.drawText(fitText(data.businessName, bold, 16, logo ? 220 : 250), {
+    x: businessX,
     y: 760,
     size: 16,
     font: bold,
     color: inverse,
   });
-  drawRight(page, `# ${data.invoiceNumber}`, 547, 791, 12, bold, inverse);
-  drawRight(page, `Issued ${formatDate(data.issueDate)}`, 547, 771, 9, regular, inverse);
-  drawRight(page, `Due ${formatDate(data.dueDate)}`, 547, 755, 9, regular, inverse);
+  const metaTop = logo && data.templateId === "classic" ? 770 : 791;
+  drawRight(page, `# ${data.invoiceNumber}`, 547, metaTop, 12, bold, inverse);
+  drawRight(page, `Issued ${formatDate(data.issueDate)}`, 547, metaTop - 20, 9, regular, inverse);
+  drawRight(page, `Due ${formatDate(data.dueDate)}`, 547, metaTop - 36, 9, regular, inverse);
+  if (logo) {
+    const bounds = logo.scaleToFit(72, 42);
+    page.drawImage(logo, {
+      x: data.templateId === "classic" ? 470 : 48,
+      y: 782,
+      width: bounds.width,
+      height: bounds.height,
+    });
+  }
 }
 
 function drawParties(
@@ -173,6 +193,7 @@ function drawFooter(
   data: InvoiceBuilderInput,
   regular: PDFFont,
   bold: PDFFont,
+  signatureFont: PDFFont,
   palette: Palette,
 ) {
   let y = 160;
@@ -193,6 +214,15 @@ function drawFooter(
       y -= 11;
     }
   }
+  page.drawText(fitText(data.signatureName, signatureFont, 22, 170), {
+    x: 375,
+    y: 98,
+    size: 22,
+    font: signatureFont,
+    color: palette.ink,
+  });
+  page.drawLine({ start: { x: 360, y: 88 }, end: { x: 545, y: 88 }, thickness: 0.8, color: palette.muted });
+  page.drawText("Authorized signature", { x: 402, y: 74, size: 8, font: bold, color: palette.muted });
   page.drawText("Generated by DueNudge", { x: 48, y: 28, size: 7, font: regular, color: palette.muted });
 }
 

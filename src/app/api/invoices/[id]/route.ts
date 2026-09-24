@@ -50,5 +50,10 @@ export async function DELETE(_request: Request, { params }: Params) {
       console.error("[DueNudge] Could not delete invoice PDF:", cleanupError);
     });
   }
+  if (existing.sourceDocumentPath) {
+    await deleteInvoicePdf(existing.sourceDocumentPath).catch((cleanupError) => {
+      console.error("[DueNudge] Could not delete original invoice file:", cleanupError);
+    });
+  }
   return NextResponse.json({ ok: true });
 }

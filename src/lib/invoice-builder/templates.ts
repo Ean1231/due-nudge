@@ -8,26 +8,26 @@ export const INVOICE_TEMPLATES: Array<{
 }> = [
   {
     id: "classic",
-    name: "Classic Navy",
-    description: "Traditional, confident, and suited to professional services.",
-    previewClass: "bg-[#12386b]",
+    name: "Classic Green",
+    description: "A compact green business invoice with clear totals and signature.",
+    previewClass: "bg-[#078f70]",
   },
   {
     id: "modern",
-    name: "Modern Mint",
-    description: "Fresh green accents with a clean contemporary layout.",
-    previewClass: "bg-[#078c73]",
+    name: "Corporate Blue",
+    description: "A bordered corporate layout with a structured item table.",
+    previewClass: "bg-[#1558b0]",
   },
   {
     id: "minimal",
     name: "Minimal Black",
-    description: "Simple typography with no unnecessary decoration.",
+    description: "A grayscale service invoice with alternating line-item rows.",
     previewClass: "bg-[#171717]",
   },
   {
     id: "warm",
-    name: "Warm Studio",
-    description: "A friendly rust palette for independent creative work.",
-    previewClass: "bg-[#a83d24]",
+    name: "Black & Orange",
+    description: "A bold header and payment panel for modern independent businesses.",
+    previewClass: "bg-[#d87916]",
   },
 ];

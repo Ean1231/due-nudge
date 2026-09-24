@@ -2,7 +2,7 @@ import { buildReminderEmail } from "@/lib/email/template";
 import type { ReminderEmailPayload } from "@/lib/email/types";
 import { sendViaGmail } from "@/lib/gmail/send";
 import type { Invoice } from "@prisma/client";
-import { readInvoicePdf } from "@/lib/invoices/attachment";
+import { readInvoicePdf, readStoredAttachment } from "@/lib/invoices/attachment";
 
 export const GMAIL_REQUIRED_MESSAGE = "Connect Gmail so reminders come from your address.";
 
@@ -27,21 +27,28 @@ export async function sendInvoiceReminder(payload: ReminderEmailPayload, sender?
   const content = buildReminderEmail(payload, template);
 
   if (sender?.gmailRefreshToken && sender.gmailEmail) {
-    const attachment =
-      invoice?.attachmentPath && invoice.attachmentName
-        ? {
+    const attachments: Array<{ filename: string; contentType: string; data: Buffer }> = [];
+    if (invoice?.attachmentPath && invoice.attachmentName) {
+      attachments.push({
             filename: invoice.attachmentName,
             contentType: invoice.attachmentContentType || "application/pdf",
             data: await readInvoicePdf(invoice.attachmentPath),
-          }
-        : undefined;
+      });
+    }
+    if (invoice?.sourceDocumentPath && invoice.sourceDocumentName) {
+      attachments.push({
+        filename: invoice.sourceDocumentName,
+        contentType: invoice.sourceDocumentContentType || "application/octet-stream",
+        data: await readStoredAttachment(invoice.sourceDocumentPath),
+      });
+    }
     const id = await sendViaGmail({
       refreshToken: sender.gmailRefreshToken,
       fromEmail: sender.gmailEmail,
       fromName: sender.businessName || sender.name || "DueNudge",
       to: payload.to,
       content,
-      attachment,
+      attachments,
     });
     return { id };
   }

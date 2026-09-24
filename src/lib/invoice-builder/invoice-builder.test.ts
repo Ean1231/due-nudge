@@ -24,6 +24,7 @@ const base: InvoiceBuilderInput = {
   taxRate: 10,
   notes: "Thank you.",
   paymentTerms: "Payment within 14 days.",
+  signatureName: "J. Smith",
   lineItems: [{ description: "Design work", quantity: 2, unitPrice: 100 }],
 };
 

@@ -19,6 +19,7 @@ export const invoiceBuilderSchema = z.object({
   taxRate: z.number().min(0).max(100).default(0),
   notes: z.string().trim().max(1000).optional().default(""),
   paymentTerms: z.string().trim().max(500).optional().default(""),
+  signatureName: z.string().trim().min(2).max(100),
   lineItems: z
     .array(
       z.object({

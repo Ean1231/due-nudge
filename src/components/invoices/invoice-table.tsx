@@ -12,6 +12,7 @@ export type InvoiceRow = {
   dueDate: string;
   status: string;
   attachmentName: string | null;
+  sourceDocumentName: string | null;
   client: { name: string; email: string };
   reminders: { milestone: number }[];
 };
@@ -58,6 +59,14 @@ export function InvoiceTable({ invoices, nudgingId, onStatusChange, onNudge }: P
                     href={`/api/invoices/${invoice.id}/attachment`}
                   >
                     Download PDF
+                  </a>
+                ) : null}
+                {invoice.sourceDocumentName ? (
+                  <a
+                    className="mt-1 block text-xs font-normal text-[var(--brand)] underline"
+                    href={`/api/invoices/${invoice.id}/source-document`}
+                  >
+                    Original file
                   </a>
                 ) : null}
               </td>
