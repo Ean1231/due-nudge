@@ -160,8 +160,8 @@ export function InvoiceBuilderForm({
           <button className="btn btn-primary" type="button" disabled={sending || Boolean(sentNotice)} onClick={() => void sendReminder()}>
             {sending ? "Sending…" : sentNotice ? "Reminder sent" : "Send reminder"}
           </button>
-          <Link className="btn btn-ghost" href="/invoices">
-            View invoices
+          <Link className="btn btn-ghost" href="/documents">
+            My documents
           </Link>
           <button className="btn btn-ghost" type="button" onClick={() => setSuccess(null)}>
             Create another

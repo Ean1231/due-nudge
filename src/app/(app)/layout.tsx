@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app/app-header";
+import { AppSidebar } from "@/components/app/app-sidebar";
 import { getSendAllowance } from "@/lib/billing/allowance";
 import { getAppUser } from "@/lib/session";
 import { isBillingRequired, needsPaymentUpdate } from "@/lib/billing/status";
@@ -14,7 +15,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const paymentFailed = isBillingRequired() && needsPaymentUpdate(user.subscriptionStatus);
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen">
+      <AppSidebar />
+      <div className="min-w-0 flex-1">
       <AppHeader label={user.businessName || user.email} gmailEmail={user.gmailEmail} />
       {paymentFailed ? (
         <div className="border-b border-[var(--line)] bg-[#fff7df] px-6 py-3 text-center text-sm">
@@ -39,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       ) : null}
       <div className="mx-auto w-full max-w-6xl px-6 py-8">{children}</div>
+      </div>
     </div>
   );
 }

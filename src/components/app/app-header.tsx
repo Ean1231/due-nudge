@@ -1,19 +1,10 @@
-import Link from "next/link";
-import { AppNav } from "@/components/app/app-nav";
 import { signOut } from "@/lib/auth";
 import { disconnectGmail } from "@/lib/gmail/actions";
 
 export function AppHeader({ label, gmailEmail }: { label: string; gmailEmail?: string | null }) {
   return (
     <header className="border-b border-[var(--line)] bg-[var(--surface)]">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="display text-xl font-semibold">
-            DueNudge
-          </Link>
-          <AppNav />
-        </div>
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3 px-6 py-4">
           {gmailEmail ? (
             <form action={disconnectGmail}>
               <button
@@ -54,8 +45,6 @@ export function AppHeader({ label, gmailEmail }: { label: string; gmailEmail?: s
             </button>
           </form>
         </div>
-      </div>
-      <AppNav mobile />
     </header>
   );
 }

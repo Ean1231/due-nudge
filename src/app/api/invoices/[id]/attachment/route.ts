@@ -5,7 +5,7 @@ import { readInvoicePdf } from "@/lib/invoices/attachment";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
   const { user, error } = await requireApiUser();
   if (error) return error;
   const { id } = await params;
@@ -19,10 +19,12 @@ export async function GET(_request: Request, { params }: Params) {
 
   try {
     const bytes = await readInvoicePdf(invoice.attachmentPath);
+    const view = new URL(request.url).searchParams.get("view") === "1";
+    const filename = invoice.attachmentName.replace(/"/g, "");
     return new Response(bytes, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${invoice.attachmentName.replace(/"/g, "")}"`,
+        "Content-Disposition": `${view ? "inline" : "attachment"}; filename="${filename}"`,
         "Cache-Control": "private, no-store",
       },
     });
