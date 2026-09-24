@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { InvoiceRow, InvoiceTable } from "@/components/invoices/invoice-table";
 
@@ -128,12 +129,17 @@ export default function InvoicesPage() {
 
   return (
     <main className="space-y-8">
-      <div>
-        <h1 className="display text-4xl font-semibold">Invoices</h1>
-        <p className="mt-2 max-w-2xl text-[var(--muted)]">
-          Saving an invoice emails the client right away. If it stays unpaid, DueNudge emails again 3, 7,
-          and 14 days after the due date. Mark it paid to stop later reminders.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="display text-4xl font-semibold">Invoices</h1>
+          <p className="mt-2 max-w-2xl text-[var(--muted)]">
+            Saving an invoice emails the client right away. If it stays unpaid, DueNudge emails again 3, 7,
+            and 14 days after the due date. Mark it paid to stop later reminders.
+          </p>
+        </div>
+        <Link className="btn btn-primary" href="/invoice-builder">
+          Create PDF invoice
+        </Link>
       </div>
       {notice ? <p className="rounded-xl bg-[rgba(31,122,77,0.12)] px-4 py-3 text-sm text-[var(--ok)]">{notice}</p> : null}
       <InvoiceForm clients={clients} error={error} pending={pending} onSubmit={onSubmit} />

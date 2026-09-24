@@ -59,6 +59,7 @@ Stripe webhook events used: `checkout.session.completed`, `customer.subscription
 - Invoices create + list + mark paid/unpaid
 - One reusable custom reminder template per account
 - Optional private PDF attachment (maximum 3 MB)
+- Four-design invoice builder with line items, tax, business/client details, and generated private PDFs
 - Manual “Send now” reminder with a 24-hour cooldown
 - Auto email reminders at day 3 / 7 / 14 past due
 - Stripe subscription with 7-day trial

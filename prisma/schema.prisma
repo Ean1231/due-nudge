@@ -58,6 +58,8 @@ model Invoice {
   attachmentName        String?
   attachmentSize        Int?
   attachmentContentType String?
+  templateId            String?
+  invoiceData           Json?
   reminders   ReminderLog[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

@@ -13,9 +13,18 @@ export type InvoiceAttachment = {
 export async function storeInvoicePdf(userId: string, file: File): Promise<InvoiceAttachment> {
   const bytes = Buffer.from(await file.arrayBuffer());
   validateInvoicePdf(file.name, file.type, file.size, bytes);
+  return storePdfBytes(userId, file.name, bytes);
+}
+
+export async function storeGeneratedInvoicePdf(userId: string, filename: string, bytes: Buffer) {
+  validateInvoicePdf(filename, "application/pdf", bytes.length, bytes);
+  return storePdfBytes(userId, filename, bytes);
+}
+
+async function storePdfBytes(userId: string, filename: string, bytes: Buffer): Promise<InvoiceAttachment> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error("PDF storage is not configured.");
 
-  const safeName = sanitizeFilename(file.name);
+  const safeName = sanitizeFilename(filename);
   const path = `invoices/${userId}/${randomUUID()}-${safeName}`;
   const blob = await put(path, bytes, {
     access: "private",
@@ -25,7 +34,7 @@ export async function storeInvoicePdf(userId: string, file: File): Promise<Invoi
   return {
     path: blob.pathname,
     name: safeName,
-    size: file.size,
+    size: bytes.length,
     contentType: "application/pdf",
   };
 }
