@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { addDays, format } from "date-fns";
 import { redirect } from "next/navigation";
 import { InvoiceBuilderForm } from "@/components/invoice-builder/invoice-builder-form";
 import { prisma } from "@/lib/db";
 import { INVOICE_TEMPLATE_IDS, invoiceBuilderSchema, type InvoiceBuilderInput } from "@/lib/invoice-builder/schema";
 import { getAppUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Invoice details" };
 
 export default async function NewGeneratedInvoicePage({
   searchParams,

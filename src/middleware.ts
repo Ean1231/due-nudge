@@ -5,6 +5,12 @@ import { getToken } from "next-auth/jwt";
 const protectedPaths = ["/dashboard", "/clients", "/invoices", "/invoice-builder", "/documents", "/billing", "/settings", "/admin"];
 
 export async function middleware(request: NextRequest) {
+  if (process.env.NODE_ENV === "production" && request.headers.get("x-forwarded-proto") === "http") {
+    const httpsUrl = request.nextUrl.clone();
+    httpsUrl.protocol = "https:";
+    return NextResponse.redirect(httpsUrl, 308);
+  }
+
   const { pathname } = request.nextUrl;
   const isProtected = protectedPaths.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
@@ -30,22 +36,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/clients",
-    "/clients/:path*",
-    "/invoices",
-    "/invoices/:path*",
-    "/invoice-builder",
-    "/invoice-builder/:path*",
-    "/documents",
-    "/documents/:path*",
-    "/billing",
-    "/billing/:path*",
-    "/settings",
-    "/settings/:path*",
-    "/admin",
-    "/admin/:path*",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt)$).*)"],
 };

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app/app-header";
@@ -6,6 +7,10 @@ import { getSendAllowance } from "@/lib/billing/allowance";
 import { getAppUser } from "@/lib/session";
 import { isBillingRequired, needsPaymentUpdate } from "@/lib/billing/status";
 import { FREE_SENDS } from "@/lib/plan";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RecentReminders } from "@/components/dashboard/recent-reminders";
@@ -5,6 +6,8 @@ import { DashboardStats } from "@/components/dashboard/stats";
 import { UnpaidInvoices } from "@/components/dashboard/unpaid-invoices";
 import { prisma } from "@/lib/db";
 import { getAppUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Overview" };
 
 export default async function DashboardPage({
   searchParams,

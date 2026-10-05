@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { format } from "date-fns";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { getAppUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "My documents" };
 
 export default async function DocumentsPage() {
   const user = await getAppUser();

@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { invoiceBuilderSchema } from "@/lib/invoice-builder/schema";
 import { INVOICE_TEMPLATES } from "@/lib/invoice-builder/templates";
 import { getAppUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Create invoice" };
 
 export default async function InvoiceBuilderTemplatesPage() {
   const user = await getAppUser();

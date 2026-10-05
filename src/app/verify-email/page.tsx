@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { verifyEmailToken } from "@/lib/security/email-verification";
+
+export const metadata: Metadata = {
+  title: "Confirm email",
+  robots: { index: false, follow: false },
+};
 
 export default async function VerifyEmailPage({
   searchParams,

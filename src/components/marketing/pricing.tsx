@@ -3,7 +3,7 @@ import { PLAN } from "@/lib/plan";
 
 export function PricingCta() {
   return (
-    <section className="border-t border-[var(--line)]">
+    <section id="pricing" className="border-t border-[var(--line)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-6 py-14 md:flex-row md:items-center">
         <div>
           <h2 className="display text-3xl">{PLAN.priceLabel}</h2>
@@ -22,8 +22,14 @@ export function PricingCta() {
 export function SiteFooter() {
   return (
     <footer className="border-t border-[var(--line)]">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 text-sm text-[var(--muted)]">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-6 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
         <span>DueNudge</span>
+        <nav className="flex flex-wrap gap-4">
+          <Link href="/#how">How it works</Link>
+          <Link href="/#pricing">Pricing</Link>
+          <Link href="/register">Create account</Link>
+          <Link href="/login">Log in</Link>
+        </nav>
         <span>© {new Date().getFullYear()}</span>
       </div>
     </footer>

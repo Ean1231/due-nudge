@@ -6,7 +6,7 @@ export function Hero() {
     <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 pb-16 pt-8 lg:grid-cols-[1.2fr_0.8fr]">
       <div>
         <p className="text-sm font-semibold text-[var(--muted)]">Invoice follow-up for freelancers</p>
-        <h1 className="display mt-3 max-w-xl text-5xl leading-[1.05]">Get the money you already invoiced.</h1>
+        <h1 className="display mt-3 max-w-xl text-4xl leading-[1.05] sm:text-5xl">Get the money you already invoiced.</h1>
         <p className="mt-4 max-w-lg text-lg leading-relaxed text-[var(--muted)]">
           Add the client and the invoice. DueNudge emails them when you save it, then again 3, 7, and 14
           days after the due date if it is still unpaid.

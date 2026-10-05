@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ReminderTemplateForm } from "@/components/settings/reminder-template-form";
 import {
@@ -5,6 +6,8 @@ import {
   DEFAULT_REMINDER_SUBJECT,
 } from "@/lib/email/custom-template";
 import { getAppUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Reminder settings" };
 
 export default async function SettingsPage() {
   const user = await getAppUser();

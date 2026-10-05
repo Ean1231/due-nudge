@@ -1,0 +1,19 @@
+# DueNudge
+
+DueNudge is a web app for freelancers who need to follow up on unpaid invoices.
+
+## What it does
+
+- The freelancer creates an invoice PDF from one of four designs.
+- They download the PDF and choose when to email the first reminder.
+- If the invoice stays unpaid, DueNudge sends reminders 3, 7, and 14 days after the due date.
+- Reminders are sent from the freelancer's own Gmail account.
+- The first 3 reminder sends are free. After that, DueNudge Pro is $12 per month, with a 7-day trial when they subscribe.
+
+## Public pages
+
+- https://due-nudge.vercel.app/ — product overview
+- https://due-nudge.vercel.app/register — create an account
+- https://due-nudge.vercel.app/login — log in
+
+Account pages, invoices, clients, and files are private and should not be indexed.
