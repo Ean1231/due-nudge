@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { del, get, put } from "@vercel/blob";
+import { isOwnedStoragePath } from "@/lib/security/storage-path";
 
 export const MAX_PDF_BYTES = 3 * 1024 * 1024;
 export const MAX_SOURCE_DOCUMENT_BYTES = 3 * 1024 * 1024;
@@ -94,15 +95,18 @@ export function validateInvoicePdf(name: string, contentType: string, size: numb
   }
 }
 
-export async function readInvoicePdf(path: string) {
-  const bytes = await readStoredAttachment(path);
+export async function readInvoicePdf(path: string, userId: string) {
+  const bytes = await readStoredAttachment(path, userId);
   if (bytes.subarray(0, 5).toString("ascii") !== "%PDF-") {
     throw new Error("The stored invoice attachment is invalid.");
   }
   return bytes;
 }
 
-export async function readStoredAttachment(path: string) {
+export async function readStoredAttachment(path: string, userId: string) {
+  if (!isOwnedStoragePath(userId, path)) {
+    throw new Error("The invoice attachment could not be found.");
+  }
   const result = await get(path, { access: "private" });
   if (!result || result.statusCode !== 200) throw new Error("The invoice attachment could not be found.");
   const bytes = Buffer.from(await new Response(result.stream).arrayBuffer());

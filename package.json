@@ -10,10 +10,9 @@
     "test": "vitest run",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "reminders": "curl -s \"http://localhost:3000/api/cron/reminders\""
+    "reminders": "curl -s -H \"Authorization: Bearer %CRON_SECRET%\" http://localhost:3000/api/cron/reminders"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^6.19.3",
     "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
@@ -23,7 +22,6 @@
     "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "resend": "^6.28.1",
     "stripe": "^22.6.2",
     "zod": "^4.6.5"
   },
@@ -38,6 +36,6 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.6"
   }
 }

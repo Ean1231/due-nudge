@@ -22,10 +22,9 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Invalid signature";
-    console.error("[DueNudge] Stripe webhook rejected:", message);
-    return NextResponse.json({ error: message }, { status: 400 });
+  } catch {
+    console.error("[DueNudge] Stripe webhook rejected");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   try {

@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api/require-user";
 import { sendManualReminder } from "@/lib/invoices/nudge";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
   const { user, error } = await requireApiUser();
   if (error) return error;
+  const limited = await enforceRateLimit(`remind:${user.id}`, 20, 60 * 60 * 1000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Too many reminder attempts. Try again later." }, { status: 429 });
+  }
 
   const { id } = await params;
   const invoice = await prisma.invoice.findFirst({

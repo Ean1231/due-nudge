@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api/require-user";
 import { readStoredAttachment } from "@/lib/invoices/attachment";
+import { isOwnedStoragePath, safeDownloadName } from "@/lib/security/storage-path";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,15 +18,19 @@ export async function GET(_request: Request, { params }: Params) {
       sourceDocumentContentType: true,
     },
   });
-  if (!invoice?.sourceDocumentPath || !invoice.sourceDocumentName) {
+  if (
+    !invoice?.sourceDocumentPath ||
+    !invoice.sourceDocumentName ||
+    !isOwnedStoragePath(user.id, invoice.sourceDocumentPath)
+  ) {
     return NextResponse.json({ error: "Original invoice file not found" }, { status: 404 });
   }
   try {
-    const bytes = await readStoredAttachment(invoice.sourceDocumentPath);
+    const bytes = await readStoredAttachment(invoice.sourceDocumentPath, user.id);
     return new Response(bytes, {
       headers: {
         "Content-Type": invoice.sourceDocumentContentType || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${invoice.sourceDocumentName.replace(/"/g, "")}"`,
+        "Content-Disposition": `attachment; filename="${safeDownloadName(invoice.sourceDocumentName)}"`,
         "Cache-Control": "private, no-store",
       },
     });

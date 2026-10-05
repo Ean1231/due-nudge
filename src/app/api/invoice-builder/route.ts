@@ -6,12 +6,18 @@ import { invoiceBuilderSchema, invoiceTotals } from "@/lib/invoice-builder/schem
 import { generateInvoicePdf } from "@/lib/invoice-builder/pdf";
 import { readInvoiceLogo } from "@/lib/invoice-builder/assets";
 import { deleteInvoicePdf, storeGeneratedInvoicePdf } from "@/lib/invoices/attachment";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { toPublicInvoice } from "@/lib/security/public-record";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const { user, error } = await requireApiUser();
   if (error) return error;
+  const limited = await enforceRateLimit(`invoice-builder:${user.id}`, 30, 60 * 60 * 1000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Too many invoices created. Try again later." }, { status: 429 });
+  }
 
   const form = await request.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Invalid invoice submission." }, { status: 400 });
@@ -99,7 +105,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         invoice: {
-          ...result.invoice,
+          ...toPublicInvoice(result.invoice),
           client: result.client,
           reminders: [],
         },

@@ -9,12 +9,14 @@ import { AuthShell } from "@/components/auth/auth-shell";
 export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNotice(null);
     const form = new FormData(event.currentTarget);
     const payload = {
       name: String(form.get("name") || ""),
@@ -32,6 +34,12 @@ export default function RegisterPage() {
     if (!res.ok) {
       setPending(false);
       setError(data.error || "Could not create account");
+      return;
+    }
+
+    if (data.verificationRequired) {
+      setPending(false);
+      setNotice("Account created. Open the confirmation link we sent to your email, then log in.");
       return;
     }
 
@@ -74,8 +82,9 @@ export default function RegisterPage() {
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
+          <input id="password" name="password" type="password" required minLength={10} autoComplete="new-password" />
         </div>
+        {notice ? <p className="text-sm text-[var(--ok)]">{notice}</p> : null}
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
         <button className="btn btn-primary w-full" type="submit" disabled={pending}>
           {pending ? "Creating…" : "Create account & connect Gmail"}

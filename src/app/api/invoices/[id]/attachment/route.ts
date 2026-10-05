@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api/require-user";
 import { readInvoicePdf } from "@/lib/invoices/attachment";
+import { isOwnedStoragePath, safeDownloadName } from "@/lib/security/storage-path";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,14 +14,14 @@ export async function GET(request: Request, { params }: Params) {
     where: { id, userId: user.id },
     select: { attachmentPath: true, attachmentName: true },
   });
-  if (!invoice?.attachmentPath || !invoice.attachmentName) {
+  if (!invoice?.attachmentPath || !invoice.attachmentName || !isOwnedStoragePath(user.id, invoice.attachmentPath)) {
     return NextResponse.json({ error: "Invoice attachment not found" }, { status: 404 });
   }
 
   try {
-    const bytes = await readInvoicePdf(invoice.attachmentPath);
+    const bytes = await readInvoicePdf(invoice.attachmentPath, user.id);
     const view = new URL(request.url).searchParams.get("view") === "1";
-    const filename = invoice.attachmentName.replace(/"/g, "");
+    const filename = safeDownloadName(invoice.attachmentName);
     return new Response(bytes, {
       headers: {
         "Content-Type": "application/pdf",

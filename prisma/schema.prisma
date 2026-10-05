@@ -21,6 +21,10 @@ model User {
   gmailRefreshToken    String?
   reminderSubject      String?
   reminderBody         String?
+  role                 String    @default("user")
+  emailVerified        DateTime?
+  emailVerificationTokenHash String?
+  emailVerificationExpires   DateTime?
   clients              Client[]
   invoices             Invoice[]
   createdAt            DateTime  @default(now())
@@ -71,6 +75,12 @@ model Invoice {
   @@unique([userId, number])
   @@index([userId, status])
   @@index([dueDate, status])
+}
+
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
 }
 
 model ReminderLog {

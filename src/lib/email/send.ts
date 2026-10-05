@@ -32,14 +32,14 @@ export async function sendInvoiceReminder(payload: ReminderEmailPayload, sender?
       attachments.push({
             filename: invoice.attachmentName,
             contentType: invoice.attachmentContentType || "application/pdf",
-            data: await readInvoicePdf(invoice.attachmentPath),
+            data: await readInvoicePdf(invoice.attachmentPath, invoice.userId),
       });
     }
     if (invoice?.sourceDocumentPath && invoice.sourceDocumentName) {
       attachments.push({
         filename: invoice.sourceDocumentName,
         contentType: invoice.sourceDocumentContentType || "application/octet-stream",
-        data: await readStoredAttachment(invoice.sourceDocumentPath),
+        data: await readStoredAttachment(invoice.sourceDocumentPath, invoice.userId),
       });
     }
     const id = await sendViaGmail({
@@ -57,6 +57,8 @@ export async function sendInvoiceReminder(payload: ReminderEmailPayload, sender?
     return { needsGmail: true as const };
   }
 
-  console.log("[DueNudge email demo]", { to: payload.to, subject: content.subject, text: content.text });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[DueNudge email demo]", { to: payload.to, subject: content.subject });
+  }
   return { id: `demo-${Date.now()}` };
 }

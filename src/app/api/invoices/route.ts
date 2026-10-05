@@ -7,6 +7,8 @@ import { deleteInvoicePdf, storeInvoicePdf, type InvoiceAttachment } from "@/lib
 import { createInvoiceSchema } from "@/lib/invoices/schema";
 import { parseDateInput } from "@/lib/dates";
 import { parseAmountToCents } from "@/lib/money";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { toPublicInvoice } from "@/lib/security/public-record";
 
 export async function GET() {
   const { user, error } = await requireApiUser();
@@ -26,12 +28,16 @@ export async function GET() {
     return a.dueDate.getTime() - b.dueDate.getTime();
   });
 
-  return NextResponse.json({ invoices });
+  return NextResponse.json({ invoices: invoices.map(toPublicInvoice) });
 }
 
 export async function POST(request: Request) {
   const { user, error } = await requireApiUser();
   if (error) return error;
+  const limited = await enforceRateLimit(`invoice-create:${user.id}`, 30, 60 * 60 * 1000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Too many invoices created. Try again later." }, { status: 429 });
+  }
 
   const form = await request.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Invalid invoice details" }, { status: 400 });
@@ -97,7 +103,7 @@ export async function POST(request: Request) {
       include: { client: true, reminders: true },
     });
 
-    return NextResponse.json({ invoice: withReminders, ...reminder }, { status: 201 });
+    return NextResponse.json({ invoice: withReminders ? toPublicInvoice(withReminders) : null, ...reminder }, { status: 201 });
   } catch (err) {
     if (attachment && !invoiceCreated) {
       await deleteInvoicePdf(attachment.path).catch((cleanupError) => {

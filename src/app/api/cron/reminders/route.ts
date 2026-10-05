@@ -6,12 +6,9 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  const url = new URL(request.url);
-  const querySecret = url.searchParams.get("secret");
 
   const authorized =
     (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-    (cronSecret && querySecret === cronSecret) ||
     (!cronSecret && process.env.NODE_ENV !== "production");
 
   if (!authorized) {

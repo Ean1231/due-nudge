@@ -23,7 +23,13 @@ export default function LoginPage() {
     });
     setPending(false);
     if (result?.error) {
-      setError("Invalid email or password");
+      setError(
+        result.code === "email_not_verified"
+          ? "Confirm your email before logging in. Check your inbox for the verification link."
+          : result.code === "rate_limited"
+            ? "Too many attempts. Try again later."
+            : "Invalid email or password",
+      );
       return;
     }
     router.push("/dashboard");
